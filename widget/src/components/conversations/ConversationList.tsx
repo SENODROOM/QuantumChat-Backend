@@ -66,8 +66,8 @@ export function ConversationList() {
       )}
 
       <div style={{ padding: '16px 18px 12px', flexShrink: 0 }}>
-        <h2 style={{ margin: '0 0 12px', fontSize: 18, fontWeight: 700, color: theme.colors.text, letterSpacing: '-0.02em' }}>
-          Messages
+        <h2 style={{ margin: '0 0 12px', fontSize: 17, fontWeight: 700, color: theme.colors.text, letterSpacing: '-0.02em' }}>
+          Chats
         </h2>
         <Input
           placeholder="Search people or messages..."

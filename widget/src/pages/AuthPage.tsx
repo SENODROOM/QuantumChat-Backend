@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import { Logo } from '../components/ui/Logo';
 import { GoogleSignInButton } from '../components/GoogleSignInButton';
-import { completeAuth, loginUser, loginWithGoogle, registerUser } from '../utils/authApi';
+import { BACKEND_OFFLINE_MSG, checkBackendHealth, completeAuth, loginUser, loginWithGoogle, registerUser } from '../utils/authApi';
 import type { UserSession } from '../utils/authSession';
 
 interface AuthPageProps {
@@ -21,6 +21,12 @@ export function AuthPage({ onAuth }: AuthPageProps) {
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     if (params.get('signup') === '1') setMode('register');
+  }, []);
+
+  useEffect(() => {
+    checkBackendHealth().then((ok) => {
+      if (!ok) setError(BACKEND_OFFLINE_MSG);
+    });
   }, []);
 
   const handleAuthSuccess = useCallback(

@@ -9,10 +9,11 @@ import { MessagesPage } from './pages/MessagesPage';
 import { ChatPage } from './pages/ChatPage';
 import { ErrorBoundary } from './components/ErrorBoundary';
 import { ThemeProvider } from './context/ThemeContext';
+import { bootstrapAdminAuth } from './utils/adminAuth';
 import './index.css';
 
 function App() {
-  const [isAuth, setIsAuth] = useState(!!localStorage.getItem('qc_admin_token'));
+  const [isAuth, setIsAuth] = useState(() => bootstrapAdminAuth());
 
   return (
     <ThemeProvider>

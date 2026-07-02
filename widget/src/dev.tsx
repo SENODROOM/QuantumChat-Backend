@@ -3,7 +3,7 @@ import { createRoot } from 'react-dom/client';
 import { ErrorBoundary } from './components/ErrorBoundary';
 import { AuthPage } from './pages/AuthPage';
 import { AppShell } from './pages/AppShell';
-import { fetchCurrentUser } from './utils/authApi';
+import { fetchCurrentUser, isAdminUser, redirectAdminSession } from './utils/authApi';
 import { loadSession, saveSession, clearSession, type UserSession } from './utils/authSession';
 import './styles.css';
 
@@ -20,6 +20,10 @@ function App() {
 
     fetchCurrentUser(stored.token)
       .then((user) => {
+        if (isAdminUser(user)) {
+          redirectAdminSession(stored.token);
+          return;
+        }
         const updated = { token: stored.token, user };
         saveSession(updated);
         setSession(updated);
@@ -63,11 +67,7 @@ function App() {
   }
 
   return (
-    <AppShell
-      session={session}
-      onLogout={() => setSession(null)}
-      onSessionUpdate={setSession}
-    />
+    <AppShell session={session} onLogout={() => setSession(null)} />
   );
 }
 

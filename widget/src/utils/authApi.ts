@@ -4,6 +4,17 @@ const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:4000';
 const API_KEY = import.meta.env.VITE_API_KEY || '';
 const WEBSITE_ID = import.meta.env.VITE_WEBSITE_ID || '';
 
+const BACKEND_OFFLINE_MSG =
+  'Cannot reach the backend server. Open a terminal and run: cd backend && npm run dev';
+
+async function apiFetch(input: string, init?: RequestInit): Promise<Response> {
+  try {
+    return await fetch(input, init);
+  } catch {
+    throw new Error(BACKEND_OFFLINE_MSG);
+  }
+}
+
 const ADMIN_ROLES = new Set(['admin', 'super_admin']);
 
 interface AuthResponse {
@@ -18,12 +29,12 @@ async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
     ...(options.headers as Record<string, string>),
   };
 
-  const res = await fetch(`${API_URL}/api/v1${path}`, { ...options, headers });
+  const res = await apiFetch(`${API_URL}/api/v1${path}`, { ...options, headers });
   let data: { success?: boolean; error?: string; data?: T };
   try {
     data = await res.json();
   } catch {
-    throw new Error('Failed to fetch — is the backend running?');
+    throw new Error(BACKEND_OFFLINE_MSG);
   }
   if (!res.ok || !data.success) throw new Error(data.error || 'Request failed');
   return data.data as T;
@@ -34,8 +45,8 @@ export function isAdminUser(user: IUser): boolean {
 }
 
 export function redirectAdminSession(token: string): void {
-  localStorage.setItem('qc_admin_token', token);
-  window.location.href = getAdminUrl();
+  const base = getAdminUrl().replace(/\/$/, '');
+  window.location.assign(`${base}/?token=${encodeURIComponent(token)}`);
 }
 
 export function completeAuth(result: AuthResponse, onUserAuth: (session: AuthResponse) => void): void {
@@ -82,13 +93,22 @@ export async function registerUser(data: {
 
 export async function fetchGoogleClientId(): Promise<string | null> {
   try {
-    const res = await fetch(`${API_URL}/api/v1/auth/google/config`);
+    const res = await apiFetch(`${API_URL}/api/v1/auth/google/config`);
     const data = await res.json();
     if (data.success && data.data?.clientId) return data.data.clientId as string;
   } catch {
-    /* backend unreachable */
+    return null;
   }
   return null;
+}
+
+export async function checkBackendHealth(): Promise<boolean> {
+  try {
+    const res = await apiFetch(`${API_URL}/health`);
+    return res.ok;
+  } catch {
+    return false;
+  }
 }
 
 export async function loginWithGoogle(credential: string): Promise<AuthResponse> {
@@ -149,4 +169,4 @@ export function getAdminUrl(): string {
   return import.meta.env.VITE_ADMIN_URL || 'http://localhost:5174';
 }
 
-export { API_URL };
+export { API_URL, BACKEND_OFFLINE_MSG };
