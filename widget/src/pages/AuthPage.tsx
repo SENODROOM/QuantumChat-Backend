@@ -1,6 +1,7 @@
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { Logo } from '../components/ui/Logo';
-import { getAdminUrl, loginUser, registerUser } from '../utils/authApi';
+import { GoogleSignInButton } from '../components/GoogleSignInButton';
+import { completeAuth, loginUser, loginWithGoogle, registerUser } from '../utils/authApi';
 import type { UserSession } from '../utils/authSession';
 
 interface AuthPageProps {
@@ -22,6 +23,13 @@ export function AuthPage({ onAuth }: AuthPageProps) {
     if (params.get('signup') === '1') setMode('register');
   }, []);
 
+  const handleAuthSuccess = useCallback(
+    (result: { token: string; user: UserSession['user'] }) => {
+      completeAuth(result, (session) => onAuth({ token: session.token, user: session.user }));
+    },
+    [onAuth]
+  );
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
@@ -31,9 +39,22 @@ export function AuthPage({ onAuth }: AuthPageProps) {
         mode === 'login'
           ? await loginUser(email, password)
           : await registerUser({ email, displayName, password });
-      onAuth({ token: result.token, user: result.user });
+      handleAuthSuccess(result);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Authentication failed');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleGoogleSuccess = async (credential: string) => {
+    setError('');
+    setLoading(true);
+    try {
+      const result = await loginWithGoogle(credential);
+      handleAuthSuccess(result);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Google sign-in failed');
     } finally {
       setLoading(false);
     }
@@ -48,28 +69,26 @@ export function AuthPage({ onAuth }: AuthPageProps) {
     window.history.replaceState({}, '', url.toString());
   };
 
-  const adminLoginUrl = `${getAdminUrl()}/login`;
-
   return (
     <div className="qc-auth-page">
       <div className="qc-auth-visual">
         <div className="qc-auth-visual-content">
-          <Logo size={72} style={{ boxShadow: '0 12px 40px rgba(59, 130, 246, 0.35)' }} />
+          <Logo size={72} className="qc-auth-hero-logo" />
           <h2>Connect with confidence.</h2>
           <p>
             Secure messaging built for teams and professionals. Sign in or create your free account to get started.
           </p>
           <div className="qc-auth-feature-list">
             <div className="qc-auth-feature">
-              <span>🔒</span>
+              <span className="qc-auth-feature-icon">🔒</span>
               <span>End-to-end secure conversations</span>
             </div>
             <div className="qc-auth-feature">
-              <span>⚡</span>
+              <span className="qc-auth-feature-icon">⚡</span>
               <span>Real-time chat and notifications</span>
             </div>
             <div className="qc-auth-feature">
-              <span>👥</span>
+              <span className="qc-auth-feature-icon">👥</span>
               <span>Team messaging workspace</span>
             </div>
           </div>
@@ -77,125 +96,127 @@ export function AuthPage({ onAuth }: AuthPageProps) {
       </div>
 
       <div className="qc-auth-panel">
-        <div className="qc-auth-mobile-logo">
-          <Logo size={44} />
-          <span style={{ fontWeight: 700, color: '#f1f5f9', fontSize: 18 }}>QuantumChat</span>
-        </div>
+        <div className="qc-auth-panel-inner">
+          <div className="qc-auth-mobile-logo">
+            <Logo size={40} />
+            <span>QuantumChat</span>
+          </div>
 
-        <div className="qc-auth-portal-bar">
-          <button
-            type="button"
-            className={`qc-auth-portal-link ${mode === 'login' ? 'qc-auth-portal-active' : ''}`}
-            onClick={() => switchMode('login')}
-          >
-            👤 User Sign In
-          </button>
-          <button
-            type="button"
-            className={`qc-auth-portal-link ${mode === 'register' ? 'qc-auth-portal-active' : ''}`}
-            onClick={() => switchMode('register')}
-          >
-            ✨ Create Account
-          </button>
-          <a href={adminLoginUrl} className="qc-auth-portal-link">
-            🛡️ Admin Login
-          </a>
-        </div>
+          <div className="qc-auth-card">
+            <div className="qc-auth-mode-pills">
+              <button
+                type="button"
+                className={`qc-auth-pill ${mode === 'login' ? 'qc-auth-pill-active' : ''}`}
+                onClick={() => switchMode('login')}
+              >
+                Sign In
+              </button>
+              <button
+                type="button"
+                className={`qc-auth-pill ${mode === 'register' ? 'qc-auth-pill-active' : ''}`}
+                onClick={() => switchMode('register')}
+              >
+                Create Account
+              </button>
+            </div>
 
-        <div className="qc-auth-mode-tabs">
-          <button
-            type="button"
-            className={`qc-auth-mode-tab ${mode === 'login' ? 'qc-auth-mode-tab-active' : ''}`}
-            onClick={() => switchMode('login')}
-          >
-            Sign In
-          </button>
-          <button
-            type="button"
-            className={`qc-auth-mode-tab ${mode === 'register' ? 'qc-auth-mode-tab-active' : ''}`}
-            onClick={() => switchMode('register')}
-          >
-            Create Account
-          </button>
-        </div>
+            <h1 className="qc-auth-form-title">
+              {mode === 'login' ? 'Welcome back' : 'Create your account'}
+            </h1>
+            <p className="qc-auth-form-sub">
+              {mode === 'login'
+                ? 'Sign in to access your secure messaging workspace.'
+                : 'Join QuantumChat in seconds — email or Google.'}
+            </p>
 
-        <h1 className="qc-auth-form-title">
-          {mode === 'login' ? 'Welcome back' : 'Create your account'}
-        </h1>
-        <p className="qc-auth-form-sub">
-          {mode === 'login'
-            ? 'Enter your credentials to access your workspace.'
-            : 'Fill in your details to join QuantumChat.'}
-        </p>
+            {error && <div className="qc-auth-error">{error}</div>}
 
-        <form onSubmit={handleSubmit}>
-          {error && <div className="qc-auth-error">{error}</div>}
-
-          {mode === 'register' && (
-            <div style={{ marginBottom: 16 }}>
-              <label className="qc-auth-label">Full name</label>
-              <input
-                type="text"
-                value={displayName}
-                onChange={(e) => setDisplayName(e.target.value)}
-                placeholder="Enter your name"
-                className="qc-auth-input"
-                required
+            <div className="qc-auth-google-wrap">
+              <GoogleSignInButton
+                mode={mode}
+                onSuccess={handleGoogleSuccess}
+                onError={(msg) => setError(msg)}
+                disabled={loading}
               />
             </div>
-          )}
 
-          <div style={{ marginBottom: 16 }}>
-            <label className="qc-auth-label">Email</label>
-            <input
-              type="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              placeholder="Enter mail id"
-              className="qc-auth-input"
-              required
-            />
-          </div>
+            <div className="qc-auth-divider">
+              <span>or continue with email</span>
+            </div>
 
-          <div style={{ marginBottom: 16 }}>
-            <label className="qc-auth-label">Password</label>
-            <input
-              type="password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              placeholder="Enter password"
-              className="qc-auth-input"
-              minLength={6}
-              required
-            />
-          </div>
+            <form onSubmit={handleSubmit} className="qc-auth-form">
+              {mode === 'register' && (
+                <div className="qc-auth-field">
+                  <label className="qc-auth-label" htmlFor="displayName">
+                    Full name
+                  </label>
+                  <input
+                    id="displayName"
+                    type="text"
+                    value={displayName}
+                    onChange={(e) => setDisplayName(e.target.value)}
+                    placeholder="Enter your full name"
+                    className="qc-auth-input"
+                    required
+                  />
+                </div>
+              )}
 
-          <button type="submit" disabled={loading} className="qc-auth-submit">
-            {loading ? 'Please wait...' : mode === 'login' ? 'Sign In' : 'Create Account'}
-          </button>
-        </form>
+              <div className="qc-auth-field">
+                <label className="qc-auth-label" htmlFor="email">
+                  Email
+                </label>
+                <input
+                  id="email"
+                  type="email"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  placeholder="Enter your email address"
+                  className="qc-auth-input"
+                  required
+                />
+              </div>
 
-        <p className="qc-auth-footer">
-          {mode === 'login' ? (
-            <>
-              Don&apos;t have an account?{' '}
-              <button type="button" className="qc-auth-link-btn" onClick={() => switchMode('register')}>
-                Create account
+              <div className="qc-auth-field">
+                <label className="qc-auth-label" htmlFor="password">
+                  Password
+                </label>
+                <input
+                  id="password"
+                  type="password"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  placeholder={mode === 'login' ? 'Enter your password' : 'Create a password (min. 6 characters)'}
+                  className="qc-auth-input"
+                  minLength={6}
+                  required
+                />
+              </div>
+
+              <button type="submit" disabled={loading} className="qc-auth-submit">
+                {loading ? 'Please wait...' : mode === 'login' ? 'Sign In' : 'Create Account'}
               </button>
-            </>
-          ) : (
-            <>
-              Already have an account?{' '}
-              <button type="button" className="qc-auth-link-btn" onClick={() => switchMode('login')}>
-                Sign in
-              </button>
-            </>
-          )}
-          <br />
-          <span style={{ marginTop: 8, display: 'inline-block' }}>
-            Administrator? <a href={adminLoginUrl}>Open Control Center</a>
-          </span>
-        </p>
+            </form>
+
+            <p className="qc-auth-footer">
+              {mode === 'login' ? (
+                <>
+                  Don&apos;t have an account?{' '}
+                  <button type="button" className="qc-auth-link-btn" onClick={() => switchMode('register')}>
+                    Create account
+                  </button>
+                </>
+              ) : (
+                <>
+                  Already have an account?{' '}
+                  <button type="button" className="qc-auth-link-btn" onClick={() => switchMode('login')}>
+                    Sign in
+                  </button>
+                </>
+              )}
+            </p>
+          </div>
+        </div>
       </div>
     </div>
   );

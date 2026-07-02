@@ -1,6 +1,5 @@
 import { useState } from 'react';
 import { api } from '../api';
-import { getWidgetAuthUrl } from '../config';
 import { ThemeSwitcher } from '../components/ThemeSwitcher';
 
 export function LoginPage({ onLogin }: { onLogin: () => void }) {
@@ -28,7 +27,6 @@ export function LoginPage({ onLogin }: { onLogin: () => void }) {
     <div className="min-h-screen flex flex-col bg-qc-bg">
       <div className="qc-mesh-bg" aria-hidden />
 
-      {/* Top bar */}
       <header className="relative z-20 flex items-center justify-between px-6 py-4 border-b border-qc-border bg-qc-surface/80 backdrop-blur-md">
         <div className="flex items-center gap-3">
           <img src="/logo.png" alt="QuantumChat" width={36} height={36} className="rounded-lg" />
@@ -38,29 +36,11 @@ export function LoginPage({ onLogin }: { onLogin: () => void }) {
       </header>
 
       <div className="relative z-10 flex-1 flex items-center justify-center p-6">
-        <div className="w-full max-w-lg">
-          {/* Portal switcher */}
-          <div className="qc-portal-switch mb-8">
-            <a href={getWidgetAuthUrl('login')} className="qc-portal-tab">
-              <span className="qc-portal-icon">👤</span>
-              <span>User Sign In</span>
-            </a>
-            <a href={getWidgetAuthUrl('signup')} className="qc-portal-tab">
-              <span className="qc-portal-icon">✨</span>
-              <span>Create Account</span>
-            </a>
-            <span className="qc-portal-tab qc-portal-tab-active" aria-current="page">
-              <span className="qc-portal-icon">🛡️</span>
-              <span>Admin Login</span>
-            </span>
-          </div>
-
-          {/* Admin card */}
+        <div className="w-full max-w-md">
           <div className="qc-admin-login-card">
-            <div className="qc-admin-login-badge">Control Center</div>
-            <h1 className="text-2xl font-bold text-qc-text mt-4 mb-1">Administrator access</h1>
+            <h1 className="text-2xl font-bold text-qc-text mt-4 mb-1">Welcome back</h1>
             <p className="text-qc-muted text-sm mb-8">
-              Sign in with your admin credentials to manage the platform.
+              Sign in to manage your QuantumChat workspace.
             </p>
 
             <form onSubmit={handleSubmit} className="space-y-5">
@@ -74,13 +54,13 @@ export function LoginPage({ onLogin }: { onLogin: () => void }) {
               )}
 
               <div>
-                <label className="block text-sm font-medium text-qc-text mb-1.5">Admin email</label>
+                <label className="block text-sm font-medium text-qc-text mb-1.5">Email</label>
                 <input
                   type="email"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   className="qc-admin-input"
-                  placeholder="Enter admin email"
+                  placeholder="you@company.com"
                   autoComplete="email"
                   required
                 />
@@ -93,27 +73,16 @@ export function LoginPage({ onLogin }: { onLogin: () => void }) {
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   className="qc-admin-input"
-                  placeholder="Enter password"
+                  placeholder="Enter your password"
                   autoComplete="current-password"
                   required
                 />
               </div>
 
               <button type="submit" disabled={loading} className="qc-admin-btn w-full py-3">
-                {loading ? 'Signing in...' : 'Enter Control Center'}
+                {loading ? 'Signing in...' : 'Sign In'}
               </button>
             </form>
-
-            <p className="text-center text-sm text-qc-muted mt-8 pt-6 border-t border-qc-border">
-              Not an admin?{' '}
-              <a href={getWidgetAuthUrl('login')} className="text-qc-accent font-semibold hover:underline">
-                User sign in
-              </a>
-              {' · '}
-              <a href={getWidgetAuthUrl('signup')} className="text-qc-accent font-semibold hover:underline">
-                Create account
-              </a>
-            </p>
           </div>
         </div>
       </div>

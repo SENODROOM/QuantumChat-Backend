@@ -4,6 +4,8 @@ const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:4000';
 const API_KEY = import.meta.env.VITE_API_KEY || '';
 const WEBSITE_ID = import.meta.env.VITE_WEBSITE_ID || '';
 
+const ADMIN_ROLES = new Set(['admin', 'super_admin']);
+
 interface AuthResponse {
   user: IUser;
   token: string;
@@ -17,9 +19,31 @@ async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
   };
 
   const res = await fetch(`${API_URL}/api/v1${path}`, { ...options, headers });
-  const data = await res.json();
+  let data: { success?: boolean; error?: string; data?: T };
+  try {
+    data = await res.json();
+  } catch {
+    throw new Error('Failed to fetch — is the backend running?');
+  }
   if (!res.ok || !data.success) throw new Error(data.error || 'Request failed');
   return data.data as T;
+}
+
+export function isAdminUser(user: IUser): boolean {
+  return ADMIN_ROLES.has(user.role);
+}
+
+export function redirectAdminSession(token: string): void {
+  localStorage.setItem('qc_admin_token', token);
+  window.location.href = getAdminUrl();
+}
+
+export function completeAuth(result: AuthResponse, onUserAuth: (session: AuthResponse) => void): void {
+  if (isAdminUser(result.user)) {
+    redirectAdminSession(result.token);
+    return;
+  }
+  onUserAuth(result);
 }
 
 export async function loginUser(email: string, password: string): Promise<AuthResponse> {
@@ -53,6 +77,24 @@ export async function registerUser(data: {
   return request<AuthResponse>('/auth/register', {
     method: 'POST',
     body: JSON.stringify(data),
+  });
+}
+
+export async function fetchGoogleClientId(): Promise<string | null> {
+  try {
+    const res = await fetch(`${API_URL}/api/v1/auth/google/config`);
+    const data = await res.json();
+    if (data.success && data.data?.clientId) return data.data.clientId as string;
+  } catch {
+    /* backend unreachable */
+  }
+  return null;
+}
+
+export async function loginWithGoogle(credential: string): Promise<AuthResponse> {
+  return request<AuthResponse>('/auth/google', {
+    method: 'POST',
+    body: JSON.stringify({ credential }),
   });
 }
 
