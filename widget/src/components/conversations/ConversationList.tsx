@@ -29,7 +29,7 @@ export function ConversationList() {
       }
     }, 500);
     return () => clearTimeout(timer);
-  }, [state.searchQuery]);
+  }, [state.searchQuery, api]);
 
   const handleSelect = (conversationId: string) => {
     dispatch({ type: 'SET_ACTIVE_CONVERSATION', payload: conversationId });
@@ -45,30 +45,19 @@ export function ConversationList() {
   const displayConversations = state.searchQuery ? searchResults : state.conversations;
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', height: '100%', minHeight: 0, background: theme.colors.navy900 }}>
+    <div className="qc-conversation-list">
       {state.user && (
-        <div
-          style={{
-            display: 'flex',
-            alignItems: 'center',
-            gap: 12,
-            padding: '12px 18px',
-            borderBottom: `1px solid ${theme.colors.border}`,
-            background: 'rgba(59, 130, 246, 0.06)',
-          }}
-        >
+        <div className="qc-conversation-list-user">
           <Avatar name={state.user.displayName} src={state.user.avatarUrl} size="md" isOnline />
-          <div style={{ minWidth: 0 }}>
-            <p style={{ margin: 0, fontSize: 14, fontWeight: 600, color: theme.colors.text }}>{state.user.displayName}</p>
-            <p style={{ margin: 0, fontSize: 12, color: theme.colors.textMuted, overflow: 'hidden', textOverflow: 'ellipsis' }}>{state.user.email}</p>
+          <div className="qc-conversation-list-user-info">
+            <p>{state.user.displayName}</p>
+            <p>{state.user.email}</p>
           </div>
         </div>
       )}
 
-      <div style={{ padding: '16px 18px 12px', flexShrink: 0 }}>
-        <h2 style={{ margin: '0 0 12px', fontSize: 17, fontWeight: 700, color: theme.colors.text, letterSpacing: '-0.02em' }}>
-          Chats
-        </h2>
+      <div className="qc-conversation-list-search">
+        <h2>Chats</h2>
         <Input
           placeholder="Search people or messages..."
           value={state.searchQuery}
@@ -81,10 +70,10 @@ export function ConversationList() {
         />
       </div>
 
-      <div className="qc-scrollbar" style={{ flex: 1, overflowY: 'auto', minHeight: 0 }}>
+      <div className="qc-conversation-list-scroll qc-scrollbar">
         {state.searchQuery && userResults.length > 0 && (
           <div style={{ borderBottom: `1px solid ${theme.colors.border}` }}>
-            <p style={{ padding: '10px 18px 6px', fontSize: 11, fontWeight: 600, color: theme.colors.textMuted, textTransform: 'uppercase', letterSpacing: '0.06em', margin: 0 }}>
+            <p style={{ padding: '10px 16px 6px', fontSize: 11, fontWeight: 600, color: theme.colors.textMuted, textTransform: 'uppercase', letterSpacing: '0.06em', margin: 0 }}>
               People
             </p>
             {userResults.map((user) => (
@@ -98,7 +87,7 @@ export function ConversationList() {
                   display: 'flex',
                   alignItems: 'center',
                   gap: 12,
-                  padding: '12px 18px',
+                  padding: '12px 16px',
                   border: 'none',
                   cursor: 'pointer',
                   background: 'transparent',
@@ -118,7 +107,7 @@ export function ConversationList() {
               flexDirection: 'column',
               alignItems: 'center',
               justifyContent: 'center',
-              padding: '40px 24px',
+              padding: '32px 20px',
               textAlign: 'center',
             }}
           >

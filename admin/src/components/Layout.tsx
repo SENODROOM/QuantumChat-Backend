@@ -14,20 +14,11 @@ const navItems = [
     ),
   },
   {
-    to: '/chat',
-    label: 'Live Chat',
-    icon: (
-      <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
-      </svg>
-    ),
-  },
-  {
     to: '/websites',
     label: 'Sites',
     icon: (
       <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 12a9 9 0 01-9 9m9-9a9 9 0 00-9-9m9 9H3m9 9a9 9 0 01-9-9m9 9c1.657 0 3-4.03 3-9s-1.343-9-3-9m0 18c-1.657 0-3-4.03-3-9s1.343-9 3-9m-9 9a9 9 0 019-9" />
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 12a9 9 0 01-9 9m9-9a9 9 0 00-9-9m9 9H3m9 9a9 9 0 01-9-9m9 9c1.657 0 3-4.03 3-9s1.343-9 3-9m-9 9a9 9 0 019-9" />
       </svg>
     ),
   },
@@ -37,15 +28,6 @@ const navItems = [
     icon: (
       <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" />
-      </svg>
-    ),
-  },
-  {
-    to: '/messages',
-    label: 'Moderation',
-    icon: (
-      <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
       </svg>
     ),
   },
@@ -66,14 +48,11 @@ export function Layout({ onLogout }: { onLogout: () => void }) {
 
   return (
     <div className="min-h-screen flex flex-col bg-qc-bg">
-      {/* Ambient background */}
       <div className="qc-mesh-bg" aria-hidden />
 
-      {/* Top command bar */}
       <header className="sticky top-0 z-40 qc-header">
         <div className="max-w-[1440px] mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between h-16 gap-4">
-            {/* Brand */}
             <div className="flex items-center gap-3 shrink-0">
               <div className="qc-logo-ring">
                 <img src="/logo.png" alt="QuantumChat" width={36} height={36} className="rounded-lg" />
@@ -84,7 +63,6 @@ export function Layout({ onLogout }: { onLogout: () => void }) {
               </div>
             </div>
 
-            {/* Center nav — pill dock */}
             <nav className="qc-nav-dock hidden md:flex">
               {navItems.map((item) => (
                 <NavLink
@@ -99,7 +77,6 @@ export function Layout({ onLogout }: { onLogout: () => void }) {
               ))}
             </nav>
 
-            {/* Actions */}
             <div className="flex items-center gap-2 shrink-0">
               <ThemeSwitcher compact />
               <button type="button" onClick={logout} className="qc-logout-btn">
@@ -112,7 +89,6 @@ export function Layout({ onLogout }: { onLogout: () => void }) {
           </div>
         </div>
 
-        {/* Mobile nav scroll */}
         <div className="md:hidden border-t border-qc-border px-4 py-2 overflow-x-auto">
           <div className="flex gap-1 min-w-max">
             {navItems.map((item) => (
@@ -130,10 +106,8 @@ export function Layout({ onLogout }: { onLogout: () => void }) {
         </div>
       </header>
 
-      {/* Page workspace */}
       <main className="flex-1 relative z-10">
         <div className="max-w-[1440px] mx-auto px-4 sm:px-6 lg:px-8 py-6 lg:py-8">
-          {/* Breadcrumb strip */}
           <div className="qc-breadcrumb mb-6">
             <span className="text-qc-muted text-xs font-medium uppercase tracking-wider">Workspace</span>
             <span className="text-qc-muted mx-2">/</span>

@@ -1,6 +1,7 @@
 import { useRef, useEffect, useCallback } from 'react';
 import { useWidget } from '../../context/WidgetContext';
 import { MessageBubble } from './MessageBubble';
+import { processMessageList } from '../../utils/messageCrypto';
 import { theme } from '../../theme';
 import { normalizeId } from '../../utils/helpers';
 import type { IMessage } from '@quantum-chat/shared';
@@ -16,9 +17,10 @@ export function MessageList({ onReply }: { onReply: (message: IMessage) => void 
     if (!state.hasMoreMessages[convId]) return;
     const page = (state.messagePages[convId] || 1) + 1;
     const result = await api.getMessages(convId, page);
+    const decrypted = await processMessageList(result.data);
     dispatch({
       type: 'PREPEND_MESSAGES',
-      payload: { conversationId: convId, messages: result.data, hasMore: result.hasMore },
+      payload: { conversationId: convId, messages: decrypted, hasMore: result.hasMore },
     });
     dispatch({ type: 'INCREMENT_PAGE', payload: convId });
   }, [convId, state.hasMoreMessages, state.messagePages, api, dispatch]);

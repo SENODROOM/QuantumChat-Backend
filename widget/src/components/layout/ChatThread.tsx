@@ -4,6 +4,7 @@ import { MessageList } from '../messages/MessageList';
 import { MessageInput } from '../messages/MessageInput';
 import { Avatar } from '../ui/Avatar';
 import { getOtherParticipant, normalizeId } from '../../utils/helpers';
+import { processMessageList } from '../../utils/messageCrypto';
 import { theme } from '../../theme';
 import type { IMessage, IConversation } from '@quantum-chat/shared';
 
@@ -21,9 +22,10 @@ export function ChatThread() {
       dispatch({ type: 'SET_LOADING', payload: true });
       try {
         const result = await api.getMessages(convId);
+        const decrypted = await processMessageList(result.data);
         dispatch({
           type: 'SET_MESSAGES',
-          payload: { conversationId: convId, messages: result.data, hasMore: result.hasMore },
+          payload: { conversationId: convId, messages: decrypted, hasMore: result.hasMore },
         });
         socket.markRead(convId);
       } finally {
@@ -53,7 +55,10 @@ export function ChatThread() {
             <Avatar name={other.displayName} src={other.avatarUrl} size="md" isOnline={state.onlineUsers[otherId]} />
             <div className="qc-thread-header-info">
               <h3>{other.displayName}</h3>
-              <p>{state.onlineUsers[otherId] ? 'Online' : 'Offline'}</p>
+              <p>
+                {state.onlineUsers[otherId] ? 'Online' : 'Offline'}
+                <span className="qc-e2e-badge" title="Messages are end-to-end encrypted"> · 🔒 E2E</span>
+              </p>
             </div>
           </>
         )}

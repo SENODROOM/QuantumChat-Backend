@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useWidget } from '../../context/WidgetContext';
 import { Avatar } from '../ui/Avatar';
 import { formatMessageTime } from '../../utils/helpers';
+import { encryptEditedContent } from '../../utils/messageCrypto';
 import type { IMessage, IAttachment } from '@quantum-chat/shared';
 
 const REACTIONS = ['👍', '❤️', '😂', '🔥', '👏'];
@@ -59,7 +60,8 @@ export function MessageBubble({ message, isOwn, onReply }: MessageBubbleProps) {
 
   const handleEdit = async () => {
     if (!editContent.trim()) return;
-    await api.editMessage(message._id, editContent);
+    const encrypted = await encryptEditedContent(message.conversationId, editContent);
+    await api.editMessage(message._id, encrypted);
     setIsEditing(false);
   };
 

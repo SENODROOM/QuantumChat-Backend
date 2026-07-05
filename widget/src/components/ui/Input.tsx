@@ -6,17 +6,14 @@ interface InputProps extends React.InputHTMLAttributes<HTMLInputElement> {
 
 export function Input({ icon, className, ...props }: InputProps) {
   return (
-    <div className="relative">
+    <div className="qc-search-wrap">
       {icon && (
-        <span
-          className="absolute left-3.5 top-1/2 -translate-y-1/2"
-          style={{ color: '#64748B' }}
-        >
+        <span className="qc-search-icon" aria-hidden>
           {icon}
         </span>
       )}
       <input
-        className={cn('qc-search-input w-full rounded-xl py-2.5 text-sm', icon ? 'pl-10 pr-4' : 'px-4', className)}
+        className={cn('qc-search-input rounded-xl py-2.5 text-sm', icon ? 'pl-10 pr-3' : 'px-4', className)}
         {...props}
       />
     </div>

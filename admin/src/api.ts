@@ -34,7 +34,7 @@ class AdminApi {
   }
 
   getMe() {
-    return this.request<ChatUser>('/auth/me');
+    return this.request<{ _id: string; displayName: string; email: string; role: string }>('/auth/me');
   }
 
   getWebsites(page = 1) {
@@ -69,50 +69,6 @@ class AdminApi {
   blockUser(id: string, blocked: boolean) {
     return this.request(`/admin/users/${id}/block`, { method: 'PATCH', body: JSON.stringify({ blocked }) });
   }
-
-  getMessages(websiteId?: string, page = 1) {
-    const q = websiteId ? `?websiteId=${websiteId}&page=${page}` : `?page=${page}`;
-    return this.request<{ data: Message[]; total: number }>(`/admin/messages${q}`);
-  }
-
-  deleteMessage(id: string) {
-    return this.request(`/admin/messages/${id}`, { method: 'DELETE' });
-  }
-
-  // Chat APIs (admin participates as a user)
-  getConversations(page = 1) {
-    return this.request<{ data: ChatConversation[]; total: number }>(`/conversations?page=${page}`);
-  }
-
-  createConversation(participantId: string) {
-    return this.request<ChatConversation>('/conversations', {
-      method: 'POST',
-      body: JSON.stringify({ participantId }),
-    });
-  }
-
-  getConversationMessages(conversationId: string, page = 1) {
-    return this.request<{ data: ChatMessage[]; total: number }>(
-      `/conversations/${conversationId}/messages?page=${page}`
-    );
-  }
-
-  sendMessage(conversationId: string, content: string) {
-    return this.request<ChatMessage>('/messages', {
-      method: 'POST',
-      body: JSON.stringify({ conversationId, content }),
-    });
-  }
-
-  markConversationRead(conversationId: string) {
-    return this.request(`/conversations/${conversationId}/read`, { method: 'POST', body: '{}' });
-  }
-
-  searchUsers(q: string, page = 1) {
-    return this.request<{ data: ChatUser[]; total: number }>(
-      `/users/search?q=${encodeURIComponent(q)}&page=${page}`
-    );
-  }
 }
 
 import type { WebsiteBranding, WebsiteSettings } from '@quantum-chat/shared';
@@ -137,39 +93,6 @@ export interface User {
   isBlocked: boolean;
   isOnline: boolean;
   websiteId: string;
-}
-
-export interface ChatUser {
-  _id: string;
-  displayName: string;
-  email: string;
-  avatarUrl?: string;
-  isOnline: boolean;
-  role: string;
-}
-
-export interface ChatConversation {
-  _id: string;
-  participants: ChatUser[];
-  lastMessage?: { content: string; createdAt: string };
-  lastMessageAt?: string;
-  unreadCounts?: Record<string, number>;
-}
-
-export interface ChatMessage {
-  _id: string;
-  content: string;
-  senderId: ChatUser;
-  createdAt: string;
-  isEdited: boolean;
-}
-
-export interface Message {
-  _id: string;
-  content: string;
-  isDeleted: boolean;
-  senderId: { displayName: string; email: string };
-  createdAt: string;
 }
 
 export interface ChartDay {

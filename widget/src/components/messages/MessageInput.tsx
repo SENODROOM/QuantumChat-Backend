@@ -1,5 +1,6 @@
 import { useState, useRef } from 'react';
 import { useWidget } from '../../context/WidgetContext';
+import { prepareOutgoingContent } from '../../utils/messageCrypto';
 import type { IMessage, IAttachment } from '@quantum-chat/shared';
 
 interface MessageInputProps {
@@ -30,20 +31,48 @@ export function MessageInput({ replyTo, onClearReply }: MessageInputProps) {
 
   const handleSend = async () => {
     if (!content.trim() && attachments.length === 0) return;
+    const plaintext = content.trim();
+
     try {
-      await socket?.sendMessage({
-        conversationId: convId,
-        content: content.trim(),
-        replyTo: replyTo?._id,
-        attachmentIds: attachments.length ? attachments : undefined,
-      });
+      if (plaintext) {
+        const { encrypted, keyExchange } = await prepareOutgoingContent(convId, plaintext);
+        if (keyExchange) {
+          await socket?.sendMessage({ conversationId: convId, content: keyExchange });
+        }
+        await socket?.sendMessage({
+          conversationId: convId,
+          content: encrypted,
+          replyTo: replyTo?._id,
+          attachmentIds: attachments.length ? attachments : undefined,
+        });
+      } else {
+        await socket?.sendMessage({
+          conversationId: convId,
+          content: '',
+          replyTo: replyTo?._id,
+          attachmentIds: attachments.length ? attachments : undefined,
+        });
+      }
     } catch {
-      await api.sendMessage({
-        conversationId: convId,
-        content: content.trim(),
-        replyTo: replyTo?._id,
-        attachmentIds: attachments.length ? attachments : undefined,
-      });
+      if (plaintext) {
+        const { encrypted, keyExchange } = await prepareOutgoingContent(convId, plaintext);
+        if (keyExchange) {
+          await api.sendMessage({ conversationId: convId, content: keyExchange });
+        }
+        await api.sendMessage({
+          conversationId: convId,
+          content: encrypted,
+          replyTo: replyTo?._id,
+          attachmentIds: attachments.length ? attachments : undefined,
+        });
+      } else {
+        await api.sendMessage({
+          conversationId: convId,
+          content: '',
+          replyTo: replyTo?._id,
+          attachmentIds: attachments.length ? attachments : undefined,
+        });
+      }
     }
     setContent('');
     setAttachments([]);

@@ -5,8 +5,6 @@ import { LoginPage } from './pages/LoginPage';
 import { DashboardPage } from './pages/DashboardPage';
 import { WebsitesPage } from './pages/WebsitesPage';
 import { UsersPage } from './pages/UsersPage';
-import { MessagesPage } from './pages/MessagesPage';
-import { ChatPage } from './pages/ChatPage';
 import { ErrorBoundary } from './components/ErrorBoundary';
 import { ThemeProvider } from './context/ThemeContext';
 import { bootstrapAdminAuth } from './utils/adminAuth';
@@ -28,10 +26,8 @@ function App() {
               element={isAuth ? <Layout onLogout={() => setIsAuth(false)} /> : <Navigate to="/login" replace />}
             >
               <Route index element={<DashboardPage />} />
-              <Route path="chat" element={<ChatPage />} />
               <Route path="websites" element={<WebsitesPage />} />
               <Route path="users" element={<UsersPage />} />
-              <Route path="messages" element={<MessagesPage />} />
             </Route>
             <Route path="*" element={<Navigate to={isAuth ? '/' : '/login'} replace />} />
           </Routes>

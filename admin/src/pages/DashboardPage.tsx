@@ -88,6 +88,18 @@ export function DashboardPage() {
 
   return (
     <div>
+      <div
+        className="mb-6 rounded-xl border px-4 py-3 text-sm"
+        style={{
+          background: 'rgba(59, 130, 246, 0.08)',
+          borderColor: 'rgba(59, 130, 246, 0.25)',
+          color: 'var(--qc-muted)',
+        }}
+      >
+        <strong className="text-qc-text">Controlled admin access:</strong> you can view analytics, manage sites,
+        and manage users. Personal conversations and message content are private and not available here.
+      </div>
+
       <div className="mb-8 flex flex-col sm:flex-row sm:items-end sm:justify-between gap-4">
         <div>
           <h1 className="qc-page-title">Dashboard</h1>

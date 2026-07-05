@@ -7,6 +7,7 @@ import { mergeBranding, mergeSettings } from '../utils/branding';
 import { getCachedWebsiteConfig } from '../utils/siteConfigCache';
 import { normalizeId } from '../utils/helpers';
 import { showNotification, requestNotificationPermission } from '../utils/notifications';
+import { processIncomingMessage, E2E_PREVIEW } from '../utils/messageCrypto';
 import { resolveTheme } from '../theme';
 import type { UserSession } from '../utils/authSession';
 
@@ -80,14 +81,19 @@ export function useMessengerBootstrap(session: UserSession) {
         setSocket(socketClient);
 
         socketClient.connect(apiUrl, session.token, {
-          onMessage: (msg) => {
-            dispatch({ type: 'ADD_MESSAGE', payload: msg });
+          onMessage: async (msg) => {
+            const processed = await processIncomingMessage(msg);
+            if (!processed) return;
+            dispatch({ type: 'ADD_MESSAGE', payload: processed });
             const senderId = typeof msg.senderId === 'object' ? normalizeId(msg.senderId) : String(msg.senderId);
             if (senderId !== normalizeId(user._id)) {
-              showNotification('New message', msg.content);
+              showNotification('New message', processed.content || E2E_PREVIEW);
             }
           },
-          onMessageEdited: (msg) => dispatch({ type: 'UPDATE_MESSAGE', payload: msg }),
+          onMessageEdited: async (msg) => {
+            const processed = await processIncomingMessage(msg);
+            if (processed) dispatch({ type: 'UPDATE_MESSAGE', payload: processed });
+          },
           onMessageDeleted: (data) => dispatch({ type: 'DELETE_MESSAGE', payload: data }),
           onMessageReacted: (msg) => dispatch({ type: 'UPDATE_MESSAGE', payload: msg }),
           onTyping: (data) => dispatch({ type: 'SET_TYPING', payload: data }),

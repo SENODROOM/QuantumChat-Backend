@@ -1,6 +1,8 @@
+import { useEffect, useState } from 'react';
 import { useWidget } from '../../context/WidgetContext';
 import { Avatar } from '../ui/Avatar';
 import { formatMessageTime, getOtherParticipant, getUnreadForUser, normalizeId } from '../../utils/helpers';
+import { getMessagePreview, E2E_PREVIEW } from '../../utils/messageCrypto';
 import { theme } from '../../theme';
 import type { IConversation } from '@quantum-chat/shared';
 
@@ -19,6 +21,25 @@ export function ConversationItem({ conversation, isActive, onClick }: Conversati
   const unread = getUnreadForUser(conversation.unreadCounts, state.user!._id);
   const otherId = other ? normalizeId(other._id) : '';
   const lastMsg = conversation.lastMessage;
+  const [preview, setPreview] = useState('');
+
+  useEffect(() => {
+    let active = true;
+    const raw =
+      lastMsg && typeof lastMsg === 'object' && lastMsg !== null && 'content' in lastMsg
+        ? (lastMsg as { content: string }).content
+        : '';
+    if (!raw) {
+      setPreview('');
+      return;
+    }
+    getMessagePreview(conversation._id, raw).then((text) => {
+      if (active) setPreview(text || E2E_PREVIEW);
+    });
+    return () => {
+      active = false;
+    };
+  }, [conversation._id, lastMsg]);
 
   return (
     <button
@@ -64,11 +85,7 @@ export function ConversationItem({ conversation, isActive, onClick }: Conversati
               fontWeight: unread > 0 ? 500 : 400,
             }}
           >
-            {lastMsg
-              ? typeof lastMsg === 'object' && lastMsg !== null && 'content' in lastMsg
-                ? (lastMsg as { content: string }).content
-                : ''
-              : 'Start a conversation'}
+            {lastMsg ? preview || E2E_PREVIEW : 'Start a conversation'}
           </p>
           {unread > 0 && (
             <span

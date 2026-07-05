@@ -70,20 +70,41 @@
 }
 
 .qc-search-input {
-  background: rgba(5, 13, 26, 0.5);
-  border: 1px solid var(--qc-border);
-  color: var(--qc-text);
+  box-sizing: border-box;
+  width: 100%;
+  max-width: 100%;
+  background: rgba(5, 13, 26, 0.65);
+  border: 1px solid rgba(148, 163, 184, 0.18);
+  color: #f1f5f9;
   transition: border-color 0.2s, box-shadow 0.2s;
 }
 
 .qc-search-input::placeholder {
-  color: var(--qc-muted);
+  color: #94a3b8;
+  opacity: 1;
 }
 
 .qc-search-input:focus {
   outline: none;
   border-color: rgba(59, 130, 246, 0.5);
   box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.15);
+}
+
+.qc-search-wrap {
+  position: relative;
+  width: 100%;
+  min-width: 0;
+}
+
+.qc-search-icon {
+  position: absolute;
+  left: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: #64748b;
+  pointer-events: none;
+  display: flex;
+  align-items: center;
 }
 
 .qc-auth-input {
@@ -659,15 +680,89 @@
   overflow: hidden;
   background: #030712;
   font-family: 'Inter', system-ui, sans-serif;
+  --qc-text: #f1f5f9;
+  --qc-muted: #94a3b8;
+  --qc-border: rgba(148, 163, 184, 0.12);
+  --qc-accent: #3b82f6;
 }
 
 .qc-messenger-sidebar {
   width: min(100%, 380px);
-  min-width: 300px;
+  min-width: 280px;
+  max-width: 380px;
+  flex-shrink: 0;
   display: flex;
   flex-direction: column;
+  min-height: 0;
+  overflow: hidden;
   border-right: 1px solid rgba(148, 163, 184, 0.1);
   background: #0a1628;
+}
+
+.qc-conversation-list {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
+  min-width: 0;
+  overflow: hidden;
+  background: #0a1628;
+}
+
+.qc-conversation-list-user {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 16px;
+  border-bottom: 1px solid rgba(148, 163, 184, 0.1);
+  background: rgba(59, 130, 246, 0.06);
+  min-width: 0;
+}
+
+.qc-conversation-list-user-info {
+  min-width: 0;
+  flex: 1;
+}
+
+.qc-conversation-list-user-info p:first-child {
+  margin: 0;
+  font-size: 14px;
+  font-weight: 600;
+  color: #f1f5f9;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.qc-conversation-list-user-info p:last-child {
+  margin: 0;
+  font-size: 12px;
+  color: #64748b;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.qc-conversation-list-search {
+  padding: 14px 16px 12px;
+  flex-shrink: 0;
+  min-width: 0;
+  overflow: hidden;
+}
+
+.qc-conversation-list-search h2 {
+  margin: 0 0 10px;
+  font-size: 17px;
+  font-weight: 700;
+  color: #f1f5f9;
+  letter-spacing: -0.02em;
+}
+
+.qc-conversation-list-scroll {
+  flex: 1;
+  overflow-y: auto;
+  min-height: 0;
+  min-width: 0;
 }
 
 .qc-messenger-sidebar-top {
@@ -770,6 +865,11 @@
   margin: 2px 0 0;
   font-size: 12px;
   color: #64748b;
+}
+
+.qc-e2e-badge {
+  color: #22c55e;
+  font-weight: 500;
 }
 
 .qc-thread-body {
