@@ -11,7 +11,7 @@
     "db:check": "tsx src/scripts/db-check.ts"
   },
   "dependencies": {
-    "@quantum-chat/shared": "file:shared",
+    "@quantum-chat/shared": "file:src/shared",
     "bcryptjs": "^2.4.3",
     "compression": "^1.7.5",
     "cors": "^2.8.5",
@@ -22,7 +22,7 @@
     "google-auth-library": "^9.15.1",
     "helmet": "^8.0.0",
     "jsonwebtoken": "^9.0.2",
-    "mongoose": "^8.9.3",
+    "mongoose": "^8.24.1",
     "morgan": "^1.10.0",
     "multer": "^1.4.5-lts.1",
     "socket.io": "^4.8.1",
