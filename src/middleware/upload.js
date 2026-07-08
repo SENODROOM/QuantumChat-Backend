@@ -20,7 +20,7 @@ export const upload = multer({
 });
 
 export function resolveUploadPath(storagePath) {
-  return path.join(process.cwd(), UPLOAD_DIR, path.basename(storagePath));
+  return path.resolve(UPLOAD_DIR, path.basename(storagePath));
 }
 
 export { UPLOAD_DIR };

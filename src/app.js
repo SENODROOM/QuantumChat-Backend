@@ -10,7 +10,10 @@ import { authLimiter } from './middleware/rateLimiter.js';
 export function createApp() {
   const app = express();
 
-  app.use(helmet());
+  // The API is deliberately consumed cross-origin (frontend dev server runs
+  // on a different port), so the default same-origin resource policy would
+  // block the browser from reading any response, including plain JSON.
+  app.use(helmet({ crossOriginResourcePolicy: { policy: 'cross-origin' } }));
   app.use(cors({ origin: process.env.CLIENT_URL || '*' }));
   app.use(express.json());
 
