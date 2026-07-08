@@ -1,7 +1,15 @@
 import { createContext, useContext, useState, useCallback } from 'react';
 import client from '../api/client.js';
 import { generateKeyPair } from '../crypto/keys.js';
-import { savePrivateKey, getPrivateKey, saveSession, getStoredUser, clearSession, getToken } from '../crypto/keyStorage.js';
+import {
+  addKeyToRing,
+  getCurrentKeyPair,
+  hasKeyring,
+  saveSession,
+  getStoredUser,
+  clearSession,
+  getToken,
+} from '../crypto/keyStorage.js';
 import { connectSocket, disconnectSocket } from '../api/socket.js';
 
 const AuthContext = createContext(null);
@@ -13,7 +21,7 @@ export function AuthProvider({ children }) {
     const { publicKey, secretKey } = generateKeyPair();
     const { data } = await client.post('/auth/register', { username, email, password, publicKey });
     const { token, user: newUser } = data.data;
-    savePrivateKey(newUser.id, secretKey);
+    addKeyToRing(newUser.id, { publicKey, secretKey });
     saveSession(token, newUser);
     setUser(newUser);
     connectSocket();
@@ -29,15 +37,16 @@ export function AuthProvider({ children }) {
     return loggedInUser;
   }, []);
 
-  // Issues a brand-new keypair for this device and publishes the new public
-  // key to the server. Only needed when no local private key exists (e.g.
-  // first login on a new device) — any history encrypted under the old key
-  // becomes unreadable, which is expected for true E2E encryption.
-  const regenerateKeys = useCallback(async () => {
+  // Generates a fresh keypair, adds it to the local keyring, and publishes
+  // the new public key to the server. Used both for the automatic 30-minute
+  // rotation and to recover a missing keyring on a new/wiped device — in the
+  // latter case, history encrypted under prior keys stays unreadable unless
+  // this device already held those keys, which is the expected E2E tradeoff.
+  const rotateKey = useCallback(async () => {
     if (!user) throw new Error('Not authenticated');
     const { publicKey, secretKey } = generateKeyPair();
     const { data } = await client.patch('/users/me/public-key', { publicKey });
-    savePrivateKey(user.id, secretKey);
+    addKeyToRing(user.id, { publicKey, secretKey });
     saveSession(getToken(), data.data);
     setUser(data.data);
     return data.data;
@@ -49,10 +58,11 @@ export function AuthProvider({ children }) {
     setUser(null);
   }, []);
 
-  const hasLocalPrivateKey = user ? Boolean(getPrivateKey(user.id)) : false;
+  const hasLocalKeyring = user ? hasKeyring(user.id) : false;
+  const currentKeyPair = user ? getCurrentKeyPair(user.id) : null;
 
   return (
-    <AuthContext.Provider value={{ user, register, login, logout, regenerateKeys, hasLocalPrivateKey }}>
+    <AuthContext.Provider value={{ user, register, login, logout, rotateKey, hasLocalKeyring, currentKeyPair }}>
       {children}
     </AuthContext.Provider>
   );

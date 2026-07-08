@@ -44,3 +44,17 @@ export function decryptMessage(ciphertextB64, nonceB64, otherPartyPublicKeyHex, 
   if (!plainBytes) return null;
   return new TextDecoder().decode(plainBytes);
 }
+
+// Raw-byte variants for attachments — TextEncoder/TextDecoder would corrupt
+// arbitrary binary data, so files are boxed directly instead of going
+// through the string-based helpers above.
+export function encryptBytes(bytes, recipientPublicKeyHex, senderSecretKeyHex) {
+  const nonce = nacl.randomBytes(nacl.box.nonceLength);
+  const cipherBytes = nacl.box(bytes, nonce, fromHex(recipientPublicKeyHex), fromHex(senderSecretKeyHex));
+  return { cipherBytes, nonce: encodeBase64(nonce) };
+}
+
+export function decryptBytes(cipherBytes, nonceB64, otherPartyPublicKeyHex, mySecretKeyHex) {
+  const nonce = decodeBase64(nonceB64);
+  return nacl.box.open(cipherBytes, nonce, fromHex(otherPartyPublicKeyHex), fromHex(mySecretKeyHex));
+}
