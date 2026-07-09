@@ -49,15 +49,9 @@ export async function register(req, res) {
 
 export async function login(req, res) {
   try {
-    const { email, password, publicKeys } = req.body;
+    const { email, password } = req.body;
     if (!email || !password) {
       return res.status(400).json({ success: false, error: 'email and password are required' });
-    }
-    if (!validateKeySet(publicKeys)) {
-      return res.status(400).json({
-        success: false,
-        error: `publicKeys must be an array of ${KEY_SET_SIZE} 64-character hex X25519 public keys`,
-      });
     }
 
     const user = await User.findOne({ email: email.toLowerCase() }).select('+password');
@@ -65,13 +59,11 @@ export async function login(req, res) {
       return res.status(401).json({ success: false, error: 'Invalid email or password' });
     }
 
-    // Every successful login rotates the whole key set, not just the
-    // periodic 30-minute timer. The client generates a fresh 5 keypairs
-    // before calling this endpoint and keeps the old ones in its local
-    // keyring, so past messages sealed under the retired keys stay
-    // decryptable — only the publicly-advertised set changes here.
-    user.publicKeys = publicKeys.map((k) => k.toLowerCase());
-    user.keyRotatedAt = new Date();
+    // The 5-key pool is fixed at registration and doesn't change on login —
+    // it's a static set, not a rotating one. Each envelope names exactly
+    // which of the 5 it was sealed to (targetPublicKey), so the client just
+    // looks up the matching private key rather than needing "the current"
+    // one to be anything in particular.
     user.lastLoginAt = new Date();
     await user.save();
 
