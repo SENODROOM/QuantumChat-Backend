@@ -3,6 +3,7 @@ import { useAuth } from '../context/AuthContext.jsx';
 import client from '../api/client.js';
 import { connectSocket, getSocket } from '../api/socket.js';
 import { sealMessage, unsealMessage, sealBytes, pickRandom } from '../crypto/keys.js';
+import { parseKeyFile } from '../crypto/keyFile.js';
 import { getCurrentKeySet, findSecretKeyForPublicKey } from '../crypto/keyStorage.js';
 import UserList from '../components/UserList.jsx';
 import MessageBubble from '../components/MessageBubble.jsx';
@@ -13,7 +14,7 @@ function formatLastSeen(iso) {
 }
 
 export default function Chat() {
-  const { user, logout, regenerateKeys, hasLocalKeyring } = useAuth();
+  const { user, logout, regenerateKeys, importKeys, hasLocalKeyring } = useAuth();
 
   const [users, setUsers] = useState([]);
   const [selectedUser, setSelectedUser] = useState(null);
@@ -21,8 +22,10 @@ export default function Chat() {
   const [draft, setDraft] = useState('');
   const [error, setError] = useState('');
   const [search, setSearch] = useState('');
+  const [importError, setImportError] = useState('');
   const bottomRef = useRef(null);
   const fileInputRef = useRef(null);
+  const keyFileInputRef = useRef(null);
   const selectedUserRef = useRef(null);
   selectedUserRef.current = selectedUser;
 
@@ -139,6 +142,20 @@ export default function Chat() {
     setError('');
   }
 
+  async function handleImportKeyFile(e) {
+    const file = e.target.files?.[0];
+    e.target.value = '';
+    if (!file) return;
+    try {
+      const text = await file.text();
+      const secretKeys = parseKeyFile(text);
+      importKeys(secretKeys);
+      setImportError('');
+    } catch (err) {
+      setImportError(err.message || 'Failed to import keys.txt');
+    }
+  }
+
   const title = useMemo(() => selectedUser?.username || 'Select a conversation', [selectedUser]);
   const filteredUsers = useMemo(
     () => users.filter((u) => u.username.toLowerCase().includes(search.toLowerCase())),
@@ -174,10 +191,17 @@ export default function Chat() {
           <div className="key-warning">
             <p>
               No private keys found on this device. Either you cleared local storage or this is a new device.
-              Old messages encrypted under your previous keys will remain unreadable, but you can generate a
-              fresh 5-key set to continue chatting.
+              If you saved a keys.txt backup when you signed up, import it to keep reading your existing
+              messages. Otherwise you can generate a fresh 5-key set, but old messages will stay unreadable.
             </p>
-            <button onClick={handleGenerateKeys}>Generate new keys for this device</button>
+            {importError && <div className="auth-error">{importError}</div>}
+            <div className="key-warning-actions">
+              <button onClick={() => keyFileInputRef.current?.click()}>Import keys.txt</button>
+              <input ref={keyFileInputRef} type="file" accept=".txt" hidden onChange={handleImportKeyFile} />
+              <button className="secondary-button" onClick={handleGenerateKeys}>
+                Generate new keys instead
+              </button>
+            </div>
           </div>
         )}
 
