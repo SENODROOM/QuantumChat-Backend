@@ -10,6 +10,7 @@ import { playReceiveSound, playSendSound } from '../utils/sounds.js';
 import UserList from '../components/UserList.jsx';
 import MessageBubble from '../components/MessageBubble.jsx';
 import EmojiPicker from '../components/EmojiPicker.jsx';
+import ThemeToggle from '../components/ThemeToggle.jsx';
 
 const MAX_VOICE_SECONDS = 60;
 
@@ -511,9 +512,12 @@ export default function Chat() {
               <div className="sidebar-lastseen">{formatLastSeen(user.lastLoginAt)}</div>
             </div>
           </div>
-          <button className="link-button" onClick={logout} aria-label="Log out of application">
-            Log out
-          </button>
+          <div className="sidebar-header-actions">
+            <ThemeToggle />
+            <button className="link-button" onClick={logout} aria-label="Log out of application">
+              Log out
+            </button>
+          </div>
         </div>
         {canChat && (
           <div className="sidebar-search">
