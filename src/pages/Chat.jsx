@@ -11,6 +11,8 @@ import UserList from '../components/UserList.jsx';
 import MessageBubble from '../components/MessageBubble.jsx';
 import EmojiPicker from '../components/EmojiPicker.jsx';
 import ThemeToggle from '../components/ThemeToggle.jsx';
+import ConfirmDialog from '../components/ConfirmDialog.jsx';
+import { getHiddenChatIds, hideChat, unhideChat } from '../utils/hiddenChats.js';
 
 const MAX_VOICE_SECONDS = 60;
 const ACTIVE_WINDOW_MS = 5 * 60 * 1000;
@@ -32,7 +34,7 @@ function formatVoiceTimer(seconds) {
 }
 
 export default function Chat() {
-  const { user, logout, regenerateKeys, importKeys, hasLocalKeyring } = useAuth();
+  const { user, logout, regenerateKeys, importKeys, hasLocalKeyring, updateSessionUser } = useAuth();
 
   const [users, setUsers] = useState([]);
   const [selectedUser, setSelectedUser] = useState(null);
@@ -49,6 +51,9 @@ export default function Chat() {
   const [recordSeconds, setRecordSeconds] = useState(0);
   const [sendingVoice, setSendingVoice] = useState(false);
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
+  const [hiddenChatIds, setHiddenChatIds] = useState(() => getHiddenChatIds(user?.id));
+  const [confirmDialog, setConfirmDialog] = useState(null);
+  const [confirmBusy, setConfirmBusy] = useState(false);
   const messageListRef = useRef(null);
   const bottomRef = useRef(null);
   const fileInputRef = useRef(null);
@@ -126,6 +131,8 @@ export default function Chat() {
     function handleIncoming(raw) {
       const current = selectedUserRef.current;
       const otherId = String(raw.from) === String(user.id) ? raw.to : raw.from;
+      const blocked = (user.blockedUsers || []).map(String);
+      if (blocked.includes(String(otherId))) return;
       if (!current || String(current.id) !== String(otherId)) return;
 
       if (String(raw.from) !== String(user.id)) {
@@ -234,8 +241,53 @@ export default function Chat() {
   const canChat = hasLocalKeyring;
 
   function handleSelectUser(u) {
+    const peerId = String(u.id);
+    if (hiddenChatIds.includes(peerId)) {
+      setHiddenChatIds(unhideChat(user.id, peerId));
+    }
     setSelectedUser(u);
     setSidebarOpen(false);
+  }
+
+  function handleHideChat(u) {
+    const peerId = String(u.id);
+    setHiddenChatIds(hideChat(user.id, peerId));
+    if (selectedUser && String(selectedUser.id) === peerId) {
+      setSelectedUser(null);
+      setMessages([]);
+    }
+  }
+
+  function handleBlockUser(u) {
+    setConfirmDialog({
+      type: 'block',
+      user: u,
+      title: `Block ${u.username}?`,
+      message: 'They’ll be removed from your list and you won’t be able to message each other. Chat history is kept.',
+      confirmLabel: 'Block',
+      danger: true,
+    });
+  }
+
+  async function executeBlockUser(u) {
+    try {
+      setConfirmBusy(true);
+      const { data } = await client.post(`/users/${u.id}/block`);
+      updateSessionUser(data.data);
+      setUsers((prev) => prev.filter((peer) => String(peer.id) !== String(u.id)));
+      setHiddenChatIds(hideChat(user.id, u.id));
+      if (selectedUser && String(selectedUser.id) === String(u.id)) {
+        setSelectedUser(null);
+        setMessages([]);
+      }
+      setError('');
+      setConfirmDialog(null);
+    } catch (err) {
+      setError(err.response?.data?.error || 'Failed to block user');
+      setConfirmDialog(null);
+    } finally {
+      setConfirmBusy(false);
+    }
   }
 
   async function handleSend(e) {
@@ -445,15 +497,45 @@ export default function Chat() {
     };
   }, []);
 
-  async function handleDeleteMessage(messageId) {
+  function handleDeleteMessage(messageId) {
     if (!messageId) return;
-    const confirmed = window.confirm('Delete this message for everyone? It will disappear for both of you with no trace.');
-    if (!confirmed) return;
+    setConfirmDialog({
+      type: 'delete',
+      messageId,
+      title: 'Delete message?',
+      message: 'This removes the message for everyone. It will disappear for both of you with no trace.',
+      confirmLabel: 'Delete',
+      danger: true,
+    });
+  }
+
+  async function executeDeleteMessage(messageId) {
     try {
+      setConfirmBusy(true);
       await client.delete(`/messages/${messageId}`);
       setMessages((prev) => prev.filter((m) => String(m.id || m._id) !== String(messageId)));
+      setConfirmDialog(null);
     } catch (err) {
       setError(err.response?.data?.error || 'Failed to delete message');
+      setConfirmDialog(null);
+    } finally {
+      setConfirmBusy(false);
+    }
+  }
+
+  function closeConfirmDialog() {
+    if (confirmBusy) return;
+    setConfirmDialog(null);
+  }
+
+  async function handleConfirmDialog() {
+    if (!confirmDialog) return;
+    if (confirmDialog.type === 'block') {
+      await executeBlockUser(confirmDialog.user);
+      return;
+    }
+    if (confirmDialog.type === 'delete') {
+      await executeDeleteMessage(confirmDialog.messageId);
     }
   }
 
@@ -493,10 +575,15 @@ export default function Chat() {
   }
 
   const title = useMemo(() => selectedUser?.username || 'Select a conversation', [selectedUser]);
-  const filteredUsers = useMemo(
-    () => users.filter((u) => u?.username?.toLowerCase().includes(search.toLowerCase())),
-    [users, search]
-  );
+  const filteredUsers = useMemo(() => {
+    const q = search.toLowerCase().trim();
+    const hidden = new Set(hiddenChatIds);
+    return users.filter((u) => {
+      const name = u?.username?.toLowerCase() || '';
+      if (q) return name.includes(q);
+      return !hidden.has(String(u.id));
+    });
+  }, [users, search, hiddenChatIds]);
 
   return (
     <div className="chat-page">
@@ -536,6 +623,8 @@ export default function Chat() {
             users={filteredUsers}
             selectedUserId={selectedUser?.id}
             onSelect={handleSelectUser}
+            onHide={handleHideChat}
+            onBlock={handleBlockUser}
             loading={loadingUsers}
           />
         ) : (
@@ -753,6 +842,17 @@ export default function Chat() {
           </>
         )}
       </main>
+
+      <ConfirmDialog
+        open={Boolean(confirmDialog)}
+        title={confirmDialog?.title}
+        message={confirmDialog?.message}
+        confirmLabel={confirmDialog?.confirmLabel}
+        danger={confirmDialog?.danger}
+        busy={confirmBusy}
+        onCancel={closeConfirmDialog}
+        onConfirm={handleConfirmDialog}
+      />
     </div>
   );
 }

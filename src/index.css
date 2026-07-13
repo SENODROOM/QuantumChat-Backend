@@ -692,6 +692,7 @@ input:focus-visible,
   display: flex;
   flex-direction: column;
   min-width: 0;
+  flex: 1;
 }
 
 .user-list-name {
@@ -706,6 +707,55 @@ input:focus-visible,
   font-size: 11px;
   color: var(--text-muted);
   margin-top: 1px;
+}
+
+.user-list-actions {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  flex-shrink: 0;
+  opacity: 0;
+  transition: opacity var(--transition-fast);
+}
+
+.user-list-item:hover .user-list-actions,
+.user-list-item:focus-within .user-list-actions,
+.user-list-item.active .user-list-actions {
+  opacity: 1;
+}
+
+.user-list-action-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 30px;
+  height: 30px;
+  border-radius: var(--radius-sm);
+  color: var(--text-muted);
+  background: transparent;
+  border: none;
+  transition: background var(--transition-fast), color var(--transition-fast);
+}
+
+.user-list-action-btn svg {
+  width: 15px;
+  height: 15px;
+}
+
+.user-list-action-btn:hover {
+  background: var(--bg-elevated);
+  color: var(--text-primary);
+}
+
+.user-list-action-btn.danger:hover {
+  background: var(--danger-muted);
+  color: var(--danger);
+}
+
+@media (max-width: 768px) {
+  .user-list-actions {
+    opacity: 1;
+  }
 }
 
 /* Avatar */
@@ -1516,6 +1566,145 @@ input:focus-visible,
   inset: 0;
   background: var(--overlay);
   z-index: 20;
+}
+
+/* ----------------------------------------------------------------
+   Confirm dialog
+   ---------------------------------------------------------------- */
+
+.confirm-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  background: var(--overlay);
+  animation: confirmFadeIn 160ms ease;
+}
+
+.confirm-dialog {
+  width: 100%;
+  max-width: 380px;
+  background: var(--bg-surface);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-xl);
+  padding: 28px 24px 20px;
+  box-shadow: var(--shadow-lg);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  gap: 10px;
+  animation: confirmPopIn 180ms ease;
+}
+
+.confirm-dialog-icon {
+  width: 48px;
+  height: 48px;
+  border-radius: var(--radius-md);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--accent-muted);
+  color: var(--accent);
+  margin-bottom: 4px;
+}
+
+.confirm-dialog-icon.danger {
+  background: var(--danger-muted);
+  color: var(--danger);
+}
+
+.confirm-dialog-icon svg {
+  width: 22px;
+  height: 22px;
+}
+
+.confirm-dialog-title {
+  margin: 0;
+  font-size: 18px;
+  font-weight: 700;
+  color: var(--text-primary);
+  line-height: 1.3;
+}
+
+.confirm-dialog-message {
+  margin: 0;
+  font-size: 14px;
+  line-height: 1.55;
+  color: var(--text-secondary);
+}
+
+.confirm-dialog-actions {
+  display: flex;
+  gap: 10px;
+  width: 100%;
+  margin-top: 12px;
+}
+
+.confirm-btn {
+  flex: 1;
+  padding: 11px 14px;
+  border-radius: var(--radius-md);
+  font-size: 14px;
+  font-weight: 600;
+  border: 1px solid transparent;
+  transition: background var(--transition-fast), color var(--transition-fast), border-color var(--transition-fast), opacity var(--transition-fast);
+}
+
+.confirm-btn:disabled {
+  opacity: 0.55;
+  cursor: default;
+}
+
+.confirm-btn.cancel {
+  background: var(--bg-elevated);
+  color: var(--text-primary);
+  border-color: var(--border-subtle);
+}
+
+.confirm-btn.cancel:hover:not(:disabled) {
+  background: var(--bg-input);
+}
+
+.confirm-btn.primary {
+  background: var(--accent);
+  color: var(--text-inverse);
+}
+
+.confirm-btn.primary:hover:not(:disabled) {
+  background: var(--accent-hover);
+}
+
+.confirm-btn.danger {
+  background: var(--danger);
+  color: var(--text-inverse);
+}
+
+.confirm-btn.danger:hover:not(:disabled) {
+  filter: brightness(1.08);
+}
+
+@keyframes confirmFadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes confirmPopIn {
+  from {
+    opacity: 0;
+    transform: translateY(8px) scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
 }
 
 /* ----------------------------------------------------------------
