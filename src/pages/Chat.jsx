@@ -13,9 +13,16 @@ import EmojiPicker from '../components/EmojiPicker.jsx';
 import ThemeToggle from '../components/ThemeToggle.jsx';
 
 const MAX_VOICE_SECONDS = 60;
+const ACTIVE_WINDOW_MS = 5 * 60 * 1000;
+
+function isRecentlyActive(iso) {
+  if (!iso) return false;
+  return Date.now() - new Date(iso).getTime() < ACTIVE_WINDOW_MS;
+}
 
 function formatLastSeen(iso) {
   if (!iso) return 'never logged in';
+  if (isRecentlyActive(iso)) return 'online';
   return `last seen ${new Date(iso).toLocaleString()}`;
 }
 
@@ -509,7 +516,7 @@ export default function Chat() {
             </div>
             <div className="sidebar-user-info">
               <div className="sidebar-username">{user.username}</div>
-              <div className="sidebar-lastseen">{formatLastSeen(user.lastLoginAt)}</div>
+              <div className="sidebar-lastseen sidebar-status-online">online</div>
             </div>
           </div>
           <div className="sidebar-header-actions">
@@ -572,7 +579,11 @@ export default function Chat() {
                 </button>
                 <span>{title}</span>
               </div>
-              {selectedUser && <span className="last-seen-badge">{formatLastSeen(selectedUser.lastLoginAt)}</span>}
+              {selectedUser && (
+                <span className={`last-seen-badge ${isRecentlyActive(selectedUser.lastLoginAt) ? 'status-online' : ''}`}>
+                  {formatLastSeen(selectedUser.lastLoginAt)}
+                </span>
+              )}
             </header>
 
             {!selectedUser ? (

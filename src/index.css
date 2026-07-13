@@ -609,6 +609,13 @@ input:focus-visible,
   margin-top: 1px;
 }
 
+.sidebar-status-online,
+.last-seen-badge.status-online,
+.user-list-lastseen.status-online {
+  color: var(--success);
+  font-weight: 500;
+}
+
 .link-button {
   background: none;
   border: none;

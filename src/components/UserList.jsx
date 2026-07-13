@@ -5,9 +5,9 @@ function isRecentlyActive(iso) {
 
 function formatShortLastSeen(iso) {
   if (!iso) return 'never seen';
+  if (isRecentlyActive(iso)) return 'online';
   const diff = Date.now() - new Date(iso).getTime();
   const mins = Math.floor(diff / 60000);
-  if (mins < 1) return 'just now';
   if (mins < 60) return `${mins}m ago`;
   const hours = Math.floor(mins / 60);
   if (hours < 24) return `${hours}h ago`;
@@ -47,7 +47,9 @@ export default function UserList({ users, selectedUserId, onSelect, loading }) {
           </span>
           <span className="user-list-meta">
             <span className="user-list-name">{u.username || 'Unknown user'}</span>
-            <span className="user-list-lastseen">{formatShortLastSeen(u.lastLoginAt)}</span>
+            <span className={`user-list-lastseen ${isRecentlyActive(u.lastLoginAt) ? 'status-online' : ''}`}>
+              {formatShortLastSeen(u.lastLoginAt)}
+            </span>
           </span>
         </button>
       ))}
