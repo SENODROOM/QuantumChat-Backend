@@ -1,262 +1,75 @@
-<<<<<<< HEAD
-# Quantum Chat — Backend
+# QuantumChat — Backend
 
-This is the **API server** for Quantum Chat.
+Express/Mongoose/Socket.IO API for QuantumChat. It never sees a private key or plaintext message — every message and attachment arrives already sealed with `nacl.box` (see [`frontend/src/crypto/keys.js`](../frontend/src/crypto/keys.js)), so the server's job is limited to auth, storage, and relaying ciphertext.
 
-## What it does
+Full architecture and crypto design: see the [root README](../README.md).
 
-- REST API (Express + MongoDB)
-- Real-time messaging (Socket.IO)
-- User auth (JWT)
-- File uploads
-- Multi-tenant website management
-
-## How to run
+## Scripts
 
 ```bash
-# From project root (recommended)
-npm run dev:backend
-
-# OR from this folder
-cd backend
-npm run dev
-```
-
-Server runs at: **http://localhost:4000**
-
-## Setup (first time)
-
-1. Copy env file:
-   ```bash
-   cp .env.example .env
-   ```
-2. Set `MONGODB_URI` and `JWT_SECRET` in `.env`
-3. Seed demo data:
-   ```bash
-   npm run seed
-   ```
-   (run from project root: `npm run seed`)
-
-## Production
-=======
-# Quantum Chat
-
-Production-ready, multi-tenant embeddable messaging platform. One central backend serves multiple company websites via an embeddable React widget and JavaScript SDK.
-
-## Architecture
-
-```
-quantum-chat/
-├── backend/           # API server (Express + MongoDB + Socket.IO)
-├── frontend/
-│   ├── admin/         # Admin dashboard (React)
-│   ├── widget/        # Embeddable chat widget (React)
-│   └── sdk/           # JavaScript SDK (script tag)
-├── shared/            # Shared TypeScript types
-├── package.json       # Root monorepo
-└── README.md
-```
-
-### Multi-Tenant Model
-
-- Each **Website** has a unique `tenantId`, `apiKey`, and `domain`
-- All data (users, conversations, messages) is scoped by `websiteId`
-- Dynamic CORS validates requesting origins against registered domains
-- Widget authenticates via API key + JWT (or host app token)
-
-## Tech Stack
-
-| Layer | Technology |
-|-------|-----------|
-| Frontend | React 18, TypeScript, Tailwind CSS, Vite |
-| Backend | Node.js, Express, MVC architecture |
-| Database | MongoDB, Mongoose |
-| Real-time | Socket.IO |
-| Auth | JWT, API keys, RBAC |
-
-## Quick Start
-
-### Prerequisites
-
-- Node.js 18+
-- MongoDB 6+
-
-### Installation
-
-```bash
-# Clone and install
-cd QuantumChat
 npm install
-
-# Configure backend
-cp backend/.env.example backend/.env
-
-# Seed demo data
-npm run seed
-
-# Start backend + frontend together
-npm run dev
+cp .env.example .env    # set MONGODB_URI and JWT_SECRET at minimum
+npm run dev              # nodemon, local dev — persistent server + Socket.IO, http://localhost:5000
+npm start                # plain node, same entry point
 ```
 
-| Service | URL |
-|---------|-----|
-| API Server | http://localhost:4000 |
-| Widget Dev | http://localhost:5173 |
-| Admin Dashboard | http://localhost:5174 |
+There is no build step — it's plain ESM Node, run directly.
 
-### Default Admin Credentials
-
-- Email: `admin@quantumchat.io`
-- Password: `Admin123!` (from `.env`)
-
-## MongoDB Collections
-
-| Collection | Purpose |
-|-----------|---------|
-| `websites` | Tenant config, branding, API keys |
-| `users` | Per-website users with roles |
-| `conversations` | 1:1 conversations with unread counts |
-| `messages` | Messages with reactions, replies, status |
-| `attachments` | File upload metadata |
-| `notifications` | In-app notifications |
-| `sessions` | Active JWT sessions |
-
-## REST API Endpoints
-
-### Public (API Key)
-
-| Method | Endpoint | Description |
-|--------|----------|-------------|
-| GET | `/api/v1/websites/config` | Widget branding config |
-| POST | `/api/v1/auth/widget` | Widget user authentication |
-| POST | `/api/v1/auth/login` | Email/password login |
-| POST | `/api/v1/auth/admin/login` | Admin login |
-
-### Authenticated
-
-| Method | Endpoint | Description |
-|--------|----------|-------------|
-| GET | `/api/v1/auth/me` | Current user |
-| GET | `/api/v1/conversations` | List conversations |
-| POST | `/api/v1/conversations` | Start conversation |
-| GET | `/api/v1/conversations/search` | Search conversations |
-| GET | `/api/v1/conversations/unread` | Total unread count |
-| GET | `/api/v1/conversations/:id/messages` | Paginated messages |
-| POST | `/api/v1/messages` | Send message |
-| PATCH | `/api/v1/messages/:id` | Edit message |
-| DELETE | `/api/v1/messages/:id` | Delete message |
-| POST | `/api/v1/messages/:id/react` | React to message |
-| POST | `/api/v1/conversations/:id/read` | Mark as read |
-| GET | `/api/v1/users/search` | Search users |
-| POST | `/api/v1/attachments` | Upload file |
-| GET | `/api/v1/notifications` | List notifications |
-
-### Admin
-
-| Method | Endpoint | Description |
-|--------|----------|-------------|
-| GET/POST | `/api/v1/admin/websites` | Manage websites |
-| PATCH | `/api/v1/admin/websites/:id` | Update branding/settings |
-| POST | `/api/v1/admin/websites/:id/verify` | Verify domain |
-| GET | `/api/v1/admin/websites/:id/analytics` | Analytics |
-| GET | `/api/v1/admin/users` | List users |
-| PATCH | `/api/v1/admin/users/:id/block` | Block/unblock user |
-| GET | `/api/v1/admin/messages` | Moderate messages |
-
-## Socket.IO Events
-
-| Event | Direction | Description |
-|-------|-----------|-------------|
-| `conversation:join` | Client → Server | Join conversation room |
-| `message:send` | Client → Server | Send real-time message |
-| `message:new` | Server → Client | New message received |
-| `message:edit` / `message:edited` | Both | Edit message |
-| `message:delete` / `message:deleted` | Both | Delete message |
-| `message:react` / `message:reacted` | Both | Emoji reactions |
-| `message:read` / `message:status` | Both | Read receipts |
-| `typing:start` / `typing:stop` / `typing:update` | Both | Typing indicators |
-| `presence:update` / `presence:bulk` | Server → Client | Online/offline |
-| `unread:count` | Server → Client | Unread badge update |
-| `conversation:updated` | Server → Client | Conversation list refresh |
-| `notification:new` | Server → Client | New notification |
-
-## Widget Embedding
-
-See [INSTALLATION.md](./INSTALLATION.md) for full integration guide.
-
-### npm Package
-
-```tsx
-import { init } from '@quantum-chat/widget';
-
-init({
-  websiteId: 'YOUR_WEBSITE_ID',
-  apiKey: 'YOUR_API_KEY',
-  apiUrl: 'https://api.yourdomain.com',
-  user: {
-    externalId: 'user-123',
-    email: 'user@company.com',
-    displayName: 'Jane Doe',
-  },
-  theme: {
-    primaryColor: '#0A66C2',
-    welcomeMessage: 'Chat with us!',
-    position: 'bottom-right',
-  },
-});
-```
-
-### Script Tag
-
-```html
-<script src="https://cdn.yourdomain.com/quantum-chat-sdk.umd.js"></script>
-<script>
-  createQuantumChat({
-    websiteId: 'YOUR_WEBSITE_ID',
-    apiKey: 'YOUR_API_KEY',
-    apiUrl: 'https://api.yourdomain.com',
-    user: { email: 'user@company.com', displayName: 'Jane Doe' },
-  });
-</script>
-```
-
-## Security
-
-- **JWT Authentication** with session tracking
-- **API Keys** per website tenant
-- **Dynamic CORS** based on registered domains
-- **Rate Limiting** on API and auth endpoints
-- **Helmet** security headers
-- **RBAC** — user, moderator, admin, super_admin
-- **Input Validation** via express-validator
-- **File Upload** type and size restrictions
-
-## Production Build
->>>>>>> e675025dc3e6128bfee680f08a2dae221ca92c80
-
-```bash
-npm run build
-npm start
-```
-
-<<<<<<< HEAD
-## Folder structure
+## Project structure
 
 ```
-backend/
-├── src/
-│   ├── models/        # MongoDB schemas
-│   ├── controllers/   # Request handlers
-│   ├── services/      # Business logic
-│   ├── routes/        # API routes
-│   ├── middleware/    # Auth, CORS, rate limit
-│   ├── socket/        # Socket.IO events
-│   └── index.ts       # Entry point
-├── .env               # Your config (MongoDB, JWT, etc.)
-└── package.json
+server.js              # local-dev entry point: connects DB, starts HTTP + Socket.IO server
+api/index.js             # Vercel serverless entry point — no Socket.IO, cached DB connection
+vercel.json               # rewrites all paths to api/index for Vercel deployment
+src/
+  app.js                 # createApp(): express instance, middleware, routes (used by both entry points)
+  config/db.js             # connectDB(): caches the mongoose connection promise (safe to call repeatedly)
+  models/
+    User.js               # username/email/password, publicKeys[5] (KEY_SET_SIZE, fixed at registration), lastLoginAt
+    Message.js             # from/to, forRecipient + forSender sealed-box envelopes, optional attachment ref
+    Attachment.js           # owner/recipient, storagePath on disk, single sealed-box envelope (recipient only)
+  controllers/
+    authController.js       # register (creates the 5-key pool once), login (auth only, doesn't touch keys)
+    userController.js       # listUsers, getUser, updatePublicKeys (manual device-recovery only)
+    messageController.js     # sendMessage (validates both envelopes), getConversation
+    attachmentController.js  # uploadAttachment (multer), downloadAttachment (sender/recipient only)
+  routes/                   # one file per resource, mounted under /api/<resource> in app.js
+  middleware/
+    auth.js                 # requireAuth: verifies JWT, attaches req.user
+    upload.js                # multer disk storage config, resolveUploadPath()
+    rateLimiter.js            # authLimiter: 20 req/min on /api/auth/*
+  socket/index.js             # attachSocket(io): JWT-authenticated Socket.IO, per-user rooms (local dev only)
 ```
-=======
-## License
 
-MIT
->>>>>>> e675025dc3e6128bfee680f08a2dae221ca92c80
+## Environment variables
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `PORT` | 5000 | HTTP/Socket.IO port — local dev only, unused on Vercel |
+| `MONGODB_URI` | — | **Required.** Mongo connection string, including the database name |
+| `JWT_SECRET` | — | **Required.** JWT signing secret — set a long random value |
+| `JWT_EXPIRES_IN` | 7d | Token lifetime |
+| `UPLOAD_DIR` | `uploads` (or `/tmp/uploads` if `VERCEL` is set) | Where encrypted attachment blobs are stored on disk |
+
+`.env` is git-ignored — never commit real credentials. On Vercel, set these in the project dashboard (Settings → Environment Variables); a local `.env` file has no effect there.
+
+## API summary
+
+See the [root README](../README.md#api-reference) for the full request/response shapes. Quick reference:
+
+| Method | Path | Auth | Notes |
+|--------|------|------|-------|
+| POST | `/api/auth/register` | — | body needs `publicKeys` (5 keys), fixed thereafter |
+| POST | `/api/auth/login` | — | just `{ email, password }` — doesn't touch keys |
+| GET | `/api/auth/me` | JWT | |
+| GET | `/api/users` | JWT | |
+| GET | `/api/users/:id` | JWT | |
+| PATCH | `/api/users/me/public-keys` | JWT | manual device-recovery only, replaces the whole pool |
+| POST | `/api/messages` | JWT | body needs `forRecipient` + `forSender` envelopes |
+| GET | `/api/messages/:userId` | JWT | full history with that user |
+| POST | `/api/attachments` | JWT | `multipart/form-data`, pre-sealed file bytes |
+| GET | `/api/attachments/:id/raw` | JWT | sender or recipient only |
+
+## Deploying to Vercel
+
+Deploy this repo directly (it's its own GitHub repo, not the monorepo root) with **Root Directory left blank**. Required env vars: `MONGODB_URI`, `JWT_SECRET`. See the [root README's deployment section](../README.md#deploying-to-vercel) for the Socket.IO and attachment-storage limitations that apply on serverless hosting.

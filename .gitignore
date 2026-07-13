@@ -1,13 +1,4 @@
 node_modules/
-/node_modules/
-node_modules/
-dist/
-build/
 .env
-.env.local
-*.log
-.DS_Store
+npm-debug.log*
 uploads/
-coverage/
-.turbo/
-*.tsbuildinfo
