@@ -641,7 +641,11 @@ export default function Chat() {
         if (replyTo) body.replyTo = replyTo.id || replyTo._id;
         const { data } = await client.post('/messages', body);
         recordActivityFromMessage(data.data);
-        setMessages((prev) => [...prev, decorate(data.data)]);
+        setMessages((prev) => {
+          const id = String(data.data.id || data.data._id);
+          if (prev.some((m) => String(m.id || m._id) === id)) return prev;
+          return [...prev, decorate(data.data)];
+        });
       }
       setDraft('');
       setReplyTo(null);
@@ -698,7 +702,11 @@ export default function Chat() {
       attachmentId,
     });
     recordActivityFromMessage(data.data);
-    setMessages((prev) => [...prev, decorate(data.data)]);
+    setMessages((prev) => {
+      const id = String(data.data.id || data.data._id);
+      if (prev.some((m) => String(m.id || m._id) === id)) return prev;
+      return [...prev, decorate(data.data)];
+    });
     playSendSound();
     setTimeout(() => scrollToBottom('smooth'), 50);
   }

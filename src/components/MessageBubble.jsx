@@ -243,7 +243,7 @@ export default function MessageBubble({
             <button
               ref={reactBtnRef}
               type="button"
-              className={`message-react-btn ${reactOpen || myReaction ? 'visible' : ''}`}
+              className={`message-react-btn ${reactOpen ? 'visible' : ''}`}
               aria-label="Add reaction"
               onClick={() => {
                 anchorRef.current = reactBtnRef.current;
