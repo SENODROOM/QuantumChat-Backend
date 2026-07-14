@@ -11,13 +11,17 @@ function FileIcon({ className }) {
   );
 }
 
-export default function AttachmentBubble({ attachment, isMine, resolveAttachmentKey }) {
+function formatFileSize(bytes) {
+  if (!bytes) return '';
+  if (bytes < 1024) return `${bytes} B`;
+  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+}
+
+export default function AttachmentBubble({ attachment, isMine, resolveAttachmentKey, onImagePreview }) {
   const [status, setStatus] = useState('idle'); // idle | loading | error
   const [preview, setPreview] = useState(null);
 
-  // Attachments are sealed to the recipient only, so the sender's own
-  // keyring never has the matching private key — this isn't a bug, it's the
-  // same "public key can't decrypt" guarantee applied to files.
   const mySecretKey = resolveAttachmentKey(attachment);
   if (!mySecretKey) {
     return (
@@ -26,7 +30,7 @@ export default function AttachmentBubble({ attachment, isMine, resolveAttachment
           <FileIcon className="file-icon" />
           <span>{attachment.filename}</span>
         </span>
-        <span className="attachment-note">{isMine ? 'only the recipient can open this' : "can't decrypt on this device"}</span>
+        <span className="attachment-note">[{isMine ? 'only the recipient can open this' : "can't decrypt on this device"}]</span>
       </div>
     );
   }
@@ -62,7 +66,16 @@ export default function AttachmentBubble({ attachment, isMine, resolveAttachment
   }
 
   if (preview) {
-    return <img className="attachment-preview" src={preview} alt={attachment.filename} />;
+    return (
+      <img
+        className="attachment-preview"
+        src={preview}
+        alt={attachment.filename}
+        onClick={() => onImagePreview && onImagePreview(preview)}
+        role="button"
+        aria-label="Open image in full screen"
+      />
+    );
   }
 
   if (status === 'loading' && attachment.mimetype.startsWith('image/')) {
@@ -74,9 +87,10 @@ export default function AttachmentBubble({ attachment, isMine, resolveAttachment
       <span className="attachment-filename">
         <FileIcon className="file-icon" />
         <span>{attachment.filename}</span>
+        {attachment.size && <span className="attachment-note">({formatFileSize(attachment.size)})</span>}
       </span>
       <button type="button" onClick={handleFetch} disabled={status === 'loading'}>
-        {status === 'loading' ? 'Decrypting…' : status === 'error' ? 'Failed — retry' : 'Open'}
+        {status === 'loading' ? 'Decrypting...' : status === 'error' ? 'Failed — retry' : 'Open'}
       </button>
     </div>
   );
