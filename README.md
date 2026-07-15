@@ -1,6 +1,6 @@
-# QuantumChat — Backend
+# QuantumChat — Frontend
 
-Express/Mongoose/Socket.IO API for QuantumChat. It never sees a private key or plaintext message — every message and attachment arrives already sealed with `nacl.box` (see [`frontend/src/crypto/keys.js`](../frontend/src/crypto/keys.js)), so the server's job is limited to auth, storage, and relaying ciphertext.
+React/Vite client for QuantumChat. All encryption happens here — key generation and `nacl.box` sealing/unsealing — the backend never receives a private key or plaintext.
 
 Full architecture and crypto design: see the [root README](../README.md).
 
@@ -46,13 +46,13 @@ test/helpers/                        # test-only server bootstrap + a standalone
 
 ## Environment variables
 
-| Variable | Default | Description |
-|----------|---------|-------------|
-| `PORT` | 5000 | HTTP/Socket.IO port — local dev only, unused on Vercel |
-| `MONGODB_URI` | — | **Required.** Mongo connection string, including the database name |
-| `JWT_SECRET` | — | **Required.** JWT signing secret — set a long random value |
-| `JWT_EXPIRES_IN` | 7d | Token lifetime |
-| `UPLOAD_DIR` | `uploads` (or `/tmp/uploads` if `VERCEL` is set) | Where encrypted attachment blobs are stored on disk |
+| Variable         | Default                                          | Description                                                        |
+| ---------------- | ------------------------------------------------ | ------------------------------------------------------------------ |
+| `PORT`           | 5000                                             | HTTP/Socket.IO port — local dev only, unused on Vercel             |
+| `MONGODB_URI`    | —                                                | **Required.** Mongo connection string, including the database name |
+| `JWT_SECRET`     | —                                                | **Required.** JWT signing secret — set a long random value         |
+| `JWT_EXPIRES_IN` | 7d                                               | Token lifetime                                                     |
+| `UPLOAD_DIR`     | `uploads` (or `/tmp/uploads` if `VERCEL` is set) | Where encrypted attachment blobs are stored on disk                |
 
 `.env` is git-ignored — never commit real credentials. On Vercel, set these in the project dashboard (Settings → Environment Variables); a local `.env` file has no effect there.
 
@@ -60,18 +60,18 @@ test/helpers/                        # test-only server bootstrap + a standalone
 
 See the [root README](../README.md#api-reference) for the full request/response shapes. Quick reference:
 
-| Method | Path | Auth | Notes |
-|--------|------|------|-------|
-| POST | `/api/auth/register` | — | body needs `publicKeys` (5 keys), fixed thereafter |
-| POST | `/api/auth/login` | — | just `{ email, password }` — doesn't touch keys |
-| GET | `/api/auth/me` | JWT | |
-| GET | `/api/users` | JWT | |
-| GET | `/api/users/:id` | JWT | |
-| PATCH | `/api/users/me/public-keys` | JWT | manual device-recovery only, replaces the whole pool |
-| POST | `/api/messages` | JWT | body needs `forRecipient` + `forSender` envelopes |
-| GET | `/api/messages/:userId` | JWT | full history with that user |
-| POST | `/api/attachments` | JWT | `multipart/form-data`, pre-sealed file bytes |
-| GET | `/api/attachments/:id/raw` | JWT | sender or recipient only |
+| Method | Path                        | Auth | Notes                                                |
+| ------ | --------------------------- | ---- | ---------------------------------------------------- |
+| POST   | `/api/auth/register`        | —    | body needs `publicKeys` (5 keys), fixed thereafter   |
+| POST   | `/api/auth/login`           | —    | just `{ email, password }` — doesn't touch keys      |
+| GET    | `/api/auth/me`              | JWT  |                                                      |
+| GET    | `/api/users`                | JWT  |                                                      |
+| GET    | `/api/users/:id`            | JWT  |                                                      |
+| PATCH  | `/api/users/me/public-keys` | JWT  | manual device-recovery only, replaces the whole pool |
+| POST   | `/api/messages`             | JWT  | body needs `forRecipient` + `forSender` envelopes    |
+| GET    | `/api/messages/:userId`     | JWT  | full history with that user                          |
+| POST   | `/api/attachments`          | JWT  | `multipart/form-data`, pre-sealed file bytes         |
+| GET    | `/api/attachments/:id/raw`  | JWT  | sender or recipient only                             |
 
 ## Testing
 
