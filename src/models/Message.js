@@ -43,6 +43,8 @@ const messageSchema = new mongoose.Schema(
     envelopes: { type: [memberEnvelopeSchema], default: undefined },
     attachment: { type: mongoose.Schema.Types.ObjectId, ref: 'Attachment' },
     reactions: { type: [reactionSchema], default: [] },
+    replyTo: { type: mongoose.Schema.Types.ObjectId, ref: 'Message' },
+    editedAt: { type: Date },
   },
   { timestamps: true }
 );

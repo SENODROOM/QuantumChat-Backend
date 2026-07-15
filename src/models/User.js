@@ -56,6 +56,14 @@ const userSchema = new mongoose.Schema(
         ref: 'User',
       },
     ],
+    avatarPath: {
+      type: String,
+      default: null,
+    },
+    avatarMimeType: {
+      type: String,
+      default: null,
+    },
   },
   { timestamps: true }
 );
@@ -83,6 +91,7 @@ userSchema.methods.toPublicJSON = function toPublicJSON() {
     publicKeys: publicKeys.map((k) => String(k).toLowerCase()),
     keyRotatedAt: this.keyRotatedAt,
     lastLoginAt: this.lastLoginAt,
+    hasAvatar: Boolean(this.avatarPath),
   };
 };
 

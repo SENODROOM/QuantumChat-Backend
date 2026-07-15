@@ -9,19 +9,17 @@ const attachmentSchema = new mongoose.Schema(
     filename: { type: String, required: true },
     mimetype: { type: String, required: true },
     size: { type: Number, required: true },
-    // Path to the encrypted bytes on disk. The server never has the key to
-    // open them — nacl.box ciphertext in, nacl.box ciphertext out.
+    // Recipient-sealed ciphertext on disk.
     storagePath: { type: String, required: true },
     nonce: { type: String, required: true },
-    // Sealed-box envelope metadata: a one-time ephemeral keypair was used to
-    // seal the file to the recipient's public key (targetPublicKey). Only
-    // the recipient's matching private key can open it — including the
-    // sender, who deliberately can't re-decrypt their own upload afterward
-    // (they already have the original file locally when they chose to send
-    // it, and sealing a second copy to themselves would double the upload
-    // cost for every attachment).
     ephemeralPublicKey: { type: String, required: true, match: HEX_64 },
     targetPublicKey: { type: String, required: true, match: HEX_64 },
+    // Optional second copy sealed to the sender's own key so they can replay
+    // voice notes / files on this (or another) device later.
+    forSenderStoragePath: { type: String },
+    forSenderNonce: { type: String },
+    forSenderEphemeralPublicKey: { type: String, match: HEX_64 },
+    forSenderTargetPublicKey: { type: String, match: HEX_64 },
   },
   { timestamps: true }
 );

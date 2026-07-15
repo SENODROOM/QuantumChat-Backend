@@ -1,9 +1,11 @@
 import User, { KEY_SET_SIZE } from '../models/User.js';
 import mongoose from 'mongoose';
+import fs from 'fs';
+import { resolveUploadPath } from '../middleware/upload.js';
 
 const HEX_64 = /^[0-9a-f]{64}$/i;
 
-const PUBLIC_FIELDS = 'username email publicKeys keyRotatedAt lastLoginAt blockedUsers';
+const PUBLIC_FIELDS = 'username email publicKeys keyRotatedAt lastLoginAt blockedUsers avatarPath avatarMimeType';
 
 export async function areUsersBlocked(userAId, userBId) {
   const [a, b] = await Promise.all([
@@ -79,4 +81,51 @@ export async function updatePublicKeys(req, res) {
   req.user.keyRotatedAt = new Date();
   await req.user.save();
   res.json({ success: true, data: req.user.toSelfJSON() });
+}
+
+export async function uploadAvatar(req, res) {
+  try {
+    if (!req.file) {
+      return res.status(400).json({ success: false, error: 'Image file is required' });
+    }
+
+    const relativePath = `avatars/${req.file.filename}`;
+    if (req.user.avatarPath) {
+      try {
+        fs.unlink(resolveUploadPath(req.user.avatarPath), () => {});
+      } catch {
+        // ignore missing old file
+      }
+    }
+
+    req.user.avatarPath = relativePath;
+    req.user.avatarMimeType = req.file.mimetype;
+    await req.user.save();
+    res.json({ success: true, data: req.user.toSelfJSON() });
+  } catch (err) {
+    if (req.file?.path) fs.unlink(req.file.path, () => {});
+    res.status(500).json({ success: false, error: err.message });
+  }
+}
+
+export async function getAvatar(req, res) {
+  try {
+    const { id } = req.params;
+    if (!mongoose.isValidObjectId(id)) {
+      return res.status(400).json({ success: false, error: 'Invalid user id' });
+    }
+    const user = await User.findById(id).select('avatarPath avatarMimeType');
+    if (!user?.avatarPath) {
+      return res.status(404).json({ success: false, error: 'No avatar' });
+    }
+    const filePath = resolveUploadPath(user.avatarPath);
+    if (!fs.existsSync(filePath)) {
+      return res.status(404).json({ success: false, error: 'Avatar file missing' });
+    }
+    res.setHeader('Content-Type', user.avatarMimeType || 'image/jpeg');
+    res.setHeader('Cache-Control', 'private, max-age=3600');
+    fs.createReadStream(filePath).pipe(res);
+  } catch (err) {
+    res.status(500).json({ success: false, error: err.message });
+  }
 }

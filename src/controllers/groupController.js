@@ -138,7 +138,7 @@ export async function getGroup(req, res) {
 export async function sendGroupMessage(req, res) {
   try {
     const { groupId } = req.params;
-    const { envelopes, attachmentId } = req.body;
+    const { envelopes, attachmentId, replyTo } = req.body;
     if (!mongoose.isValidObjectId(groupId)) {
       return res.status(400).json({ success: false, error: 'Invalid group id' });
     }
@@ -147,6 +147,18 @@ export async function sendGroupMessage(req, res) {
     if (!group) return res.status(404).json({ success: false, error: 'Group not found' });
     if (!group.members.some((m) => m.toString() === req.user._id.toString())) {
       return res.status(403).json({ success: false, error: 'Not a group member' });
+    }
+
+    let replyToId;
+    if (replyTo) {
+      if (!mongoose.isValidObjectId(replyTo)) {
+        return res.status(400).json({ success: false, error: 'Invalid replyTo id' });
+      }
+      const parent = await Message.findById(replyTo);
+      if (!parent || String(parent.group || '') !== String(groupId)) {
+        return res.status(400).json({ success: false, error: 'Reply must be in the same group' });
+      }
+      replyToId = parent._id;
     }
 
     if (!Array.isArray(envelopes) || envelopes.length < 2) {
@@ -188,12 +200,15 @@ export async function sendGroupMessage(req, res) {
       group: group._id,
       envelopes: normalized,
       attachment: attachmentId || undefined,
+      replyTo: replyToId,
     });
 
     group.updatedAt = new Date();
     await group.save();
 
-    const message = await Message.findById(created._id).populate('attachment', ATTACHMENT_POPULATE);
+    const message = await Message.findById(created._id)
+      .populate('attachment', ATTACHMENT_POPULATE)
+      .populate('replyTo', 'from forRecipient forSender envelopes group createdAt');
     const payload = toClientMessage(message);
     const io = req.app.get('io');
     emitToMembers(io, [...memberSet], 'message:new', payload);
@@ -218,7 +233,8 @@ export async function getGroupMessages(req, res) {
 
     const messages = await Message.find({ group: groupId })
       .sort({ createdAt: 1 })
-      .populate('attachment', ATTACHMENT_POPULATE);
+      .populate('attachment', ATTACHMENT_POPULATE)
+      .populate('replyTo', 'from forRecipient forSender envelopes group createdAt');
 
     res.json({ success: true, data: messages.map(toClientMessage) });
   } catch (err) {

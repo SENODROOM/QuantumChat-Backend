@@ -1,8 +1,13 @@
+import fs from 'fs';
 import mongoose from 'mongoose';
 import Message from '../models/Message.js';
+import Attachment from '../models/Attachment.js';
 import { areUsersBlocked } from './userController.js';
+import { resolveUploadPath } from '../middleware/upload.js';
 
 const HEX_64 = /^[0-9a-f]{64}$/i;
+const ATTACHMENT_POPULATE =
+  'filename mimetype size nonce ephemeralPublicKey targetPublicKey forSenderNonce forSenderEphemeralPublicKey forSenderTargetPublicKey';
 
 function validateEnvelope(envelope) {
   return (
@@ -14,9 +19,106 @@ function validateEnvelope(envelope) {
   );
 }
 
+function normalizeEnvelope(envelope) {
+  return {
+    ...envelope,
+    ephemeralPublicKey: String(envelope.ephemeralPublicKey).toLowerCase(),
+    targetPublicKey: String(envelope.targetPublicKey).toLowerCase(),
+  };
+}
+
+function toClientMessage(doc) {
+  const message = typeof doc.toObject === 'function' ? doc.toObject() : { ...doc };
+  message.id = message._id;
+  if (message.attachment && typeof message.attachment === 'object') {
+    message.attachment = {
+      ...message.attachment,
+      id: message.attachment._id || message.attachment.id,
+    };
+  }
+  if (message.group) message.group = message.group._id || message.group;
+  if (message.replyTo && typeof message.replyTo === 'object') {
+    message.replyTo = {
+      ...message.replyTo,
+      id: message.replyTo._id || message.replyTo.id,
+      from: message.replyTo.from?.toString?.() || message.replyTo.from,
+    };
+  } else if (message.replyTo) {
+    message.replyTo = { id: message.replyTo };
+  }
+  message.reactions = (message.reactions || []).map((r) => ({
+    user: r.user?.toString?.() || String(r.user),
+    forRecipient: r.forRecipient,
+    forSender: r.forSender,
+    emoji: r.emoji || undefined,
+    createdAt: r.createdAt,
+  }));
+  if (Array.isArray(message.envelopes)) {
+    message.envelopes = message.envelopes.map((e) => ({
+      ...e,
+      user: e.user?.toString?.() || String(e.user),
+    }));
+  }
+  return message;
+}
+
+function emitToParticipants(io, message, event, payload) {
+  if (!io || !message) return;
+  const from = message.from?.toString?.() || String(message.from);
+  const to = message.to ? message.to.toString() : null;
+  io.to(from).emit(event, payload);
+  if (to && to !== from) io.to(to).emit(event, payload);
+}
+
+async function removeAttachmentFiles(attachmentId) {
+  if (!attachmentId) return;
+  const attachment = await Attachment.findById(attachmentId);
+  if (!attachment) return;
+  try {
+    fs.unlink(resolveUploadPath(attachment.storagePath), () => {});
+    if (attachment.forSenderStoragePath) {
+      fs.unlink(resolveUploadPath(attachment.forSenderStoragePath), () => {});
+    }
+  } catch {
+    // best-effort
+  }
+  await Attachment.deleteOne({ _id: attachment._id });
+}
+
+async function assertReplyAllowed(req, replyToId, { to, groupId }) {
+  if (!replyToId) return undefined;
+  if (!mongoose.isValidObjectId(replyToId)) {
+    const err = new Error('Invalid replyTo id');
+    err.status = 400;
+    throw err;
+  }
+  const parent = await Message.findById(replyToId);
+  if (!parent) {
+    const err = new Error('Reply target not found');
+    err.status = 404;
+    throw err;
+  }
+  const uid = req.user._id.toString();
+  if (groupId) {
+    if (String(parent.group || '') !== String(groupId)) {
+      const err = new Error('Reply must be in the same group');
+      err.status = 400;
+      throw err;
+    }
+  } else {
+    const peers = [parent.from.toString(), parent.to?.toString()].filter(Boolean);
+    if (!peers.includes(uid) || !peers.includes(String(to))) {
+      const err = new Error('Reply must be in the same conversation');
+      err.status = 400;
+      throw err;
+    }
+  }
+  return parent._id;
+}
+
 export async function sendMessage(req, res) {
   try {
-    const { to, forRecipient, forSender, attachmentId } = req.body;
+    const { to, forRecipient, forSender, attachmentId, replyTo } = req.body;
     if (!to || !validateEnvelope(forRecipient) || !validateEnvelope(forSender)) {
       return res.status(400).json({
         success: false,
@@ -33,40 +135,221 @@ export async function sendMessage(req, res) {
       return res.status(403).json({ success: false, error: 'Cannot message a blocked user' });
     }
 
-    const message = await Message.create({
+    const replyToId = await assertReplyAllowed(req, replyTo, { to });
+
+    const created = await Message.create({
       from: req.user._id,
       to,
-      forRecipient: { ...forRecipient, targetPublicKey: forRecipient.targetPublicKey.toLowerCase() },
-      forSender: { ...forSender, targetPublicKey: forSender.targetPublicKey.toLowerCase() },
+      forRecipient: normalizeEnvelope(forRecipient),
+      forSender: normalizeEnvelope(forSender),
       attachment: attachmentId || undefined,
+      replyTo: replyToId,
     });
 
-    // Not present in serverless deployments (e.g. Vercel), which can't hold
-    // the persistent connections Socket.IO needs — REST send/fetch still
-    // works there, just without the instant push.
-    const io = req.app.get('io');
-    if (io) io.to(to.toString()).emit('message:new', message);
+    const message = await Message.findById(created._id)
+      .populate('attachment', ATTACHMENT_POPULATE)
+      .populate('replyTo', 'from forRecipient forSender envelopes group createdAt');
+    const payload = toClientMessage(message);
 
-    res.status(201).json({ success: true, data: message });
+    const io = req.app.get('io');
+    if (io) io.to(to.toString()).emit('message:new', payload);
+    if (io) io.to(req.user._id.toString()).emit('message:new', payload);
+
+    res.status(201).json({ success: true, data: payload });
+  } catch (err) {
+    res.status(err.status || 500).json({ success: false, error: err.message });
+  }
+}
+
+export async function getConversation(req, res) {
+  try {
+    const { userId } = req.params;
+    if (!mongoose.isValidObjectId(userId)) {
+      return res.status(400).json({ success: false, error: 'Invalid user id' });
+    }
+
+    const messages = await Message.find({
+      $or: [
+        { from: req.user._id, to: userId },
+        { from: userId, to: req.user._id },
+      ],
+    })
+      .sort({ createdAt: 1 })
+      .populate('attachment', ATTACHMENT_POPULATE)
+      .populate('replyTo', 'from forRecipient forSender envelopes group createdAt');
+
+    res.json({ success: true, data: messages.map(toClientMessage) });
   } catch (err) {
     res.status(500).json({ success: false, error: err.message });
   }
 }
 
-export async function getConversation(req, res) {
-  const { userId } = req.params;
-  if (!mongoose.isValidObjectId(userId)) {
-    return res.status(400).json({ success: false, error: 'Invalid user id' });
+export async function deleteMessage(req, res) {
+  try {
+    const { messageId } = req.params;
+    if (!mongoose.isValidObjectId(messageId)) {
+      return res.status(400).json({ success: false, error: 'Invalid message id' });
+    }
+
+    const message = await Message.findById(messageId);
+    if (!message) return res.status(404).json({ success: false, error: 'Message not found' });
+
+    const uid = req.user._id.toString();
+    if (message.from.toString() !== uid) {
+      return res.status(403).json({ success: false, error: 'Only the sender can delete this message for everyone' });
+    }
+
+    const payload = {
+      id: message._id.toString(),
+      from: message.from.toString(),
+      to: message.to ? message.to.toString() : undefined,
+      group: message.group ? message.group.toString() : undefined,
+    };
+
+    await removeAttachmentFiles(message.attachment);
+    await Message.deleteOne({ _id: message._id });
+
+    const io = req.app.get('io');
+    if (message.group) {
+      const Group = (await import('../models/Group.js')).default;
+      const group = await Group.findById(message.group);
+      if (group && io) {
+        for (const memberId of group.members) {
+          io.to(memberId.toString()).emit('message:deleted', payload);
+        }
+      }
+    } else {
+      emitToParticipants(io, message, 'message:deleted', payload);
+    }
+
+    res.json({ success: true, data: payload });
+  } catch (err) {
+    res.status(500).json({ success: false, error: err.message });
   }
+}
 
-  const messages = await Message.find({
-    $or: [
-      { from: req.user._id, to: userId },
-      { from: userId, to: req.user._id },
-    ],
-  })
-    .sort({ createdAt: 1 })
-    .populate('attachment', 'filename mimetype size nonce ephemeralPublicKey targetPublicKey');
+export async function reactToMessage(req, res) {
+  try {
+    const { messageId } = req.params;
+    const { forRecipient, forSender, clear } = req.body;
+    if (!mongoose.isValidObjectId(messageId)) {
+      return res.status(400).json({ success: false, error: 'Invalid message id' });
+    }
 
-  res.json({ success: true, data: messages });
+    const message = await Message.findById(messageId);
+    if (!message) return res.status(404).json({ success: false, error: 'Message not found' });
+
+    const uid = req.user._id.toString();
+    let isParty = false;
+    let groupMemberIds = null;
+    if (message.group) {
+      const Group = (await import('../models/Group.js')).default;
+      const group = await Group.findById(message.group);
+      if (!group) return res.status(404).json({ success: false, error: 'Group not found' });
+      groupMemberIds = group.members.map((m) => m.toString());
+      isParty = groupMemberIds.includes(uid);
+    } else if (message.to) {
+      isParty = [message.from.toString(), message.to.toString()].includes(uid);
+    }
+    if (!isParty) return res.status(403).json({ success: false, error: 'Not authorized' });
+
+    if (clear) {
+      message.reactions = message.reactions.filter((r) => r.user.toString() !== uid);
+    } else {
+      if (!validateEnvelope(forRecipient) || !validateEnvelope(forSender)) {
+        return res.status(400).json({
+          success: false,
+          error: 'forRecipient and forSender sealed-box envelopes are required',
+        });
+      }
+      const nextReaction = {
+        user: req.user._id,
+        forRecipient: normalizeEnvelope(forRecipient),
+        forSender: normalizeEnvelope(forSender),
+        createdAt: new Date(),
+      };
+      const idx = message.reactions.findIndex((r) => r.user.toString() === uid);
+      if (idx >= 0) message.reactions[idx] = nextReaction;
+      else message.reactions.push(nextReaction);
+      message.markModified('reactions');
+    }
+
+    await message.save();
+    const populated = await Message.findById(message._id)
+      .populate('attachment', ATTACHMENT_POPULATE)
+      .populate('replyTo', 'from forRecipient forSender envelopes group createdAt');
+    const payload = toClientMessage(populated);
+
+    const io = req.app.get('io');
+    if (groupMemberIds) {
+      for (const memberId of groupMemberIds) io?.to(memberId).emit('message:reaction', payload);
+    } else {
+      emitToParticipants(io, message, 'message:reaction', payload);
+    }
+
+    res.json({ success: true, data: payload });
+  } catch (err) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+}
+
+export async function editMessage(req, res) {
+  try {
+    const { messageId } = req.params;
+    const { forRecipient, forSender, envelopes } = req.body;
+    if (!mongoose.isValidObjectId(messageId)) {
+      return res.status(400).json({ success: false, error: 'Invalid message id' });
+    }
+
+    const message = await Message.findById(messageId);
+    if (!message) return res.status(404).json({ success: false, error: 'Message not found' });
+    if (message.from.toString() !== req.user._id.toString()) {
+      return res.status(403).json({ success: false, error: 'Only the sender can edit this message' });
+    }
+
+    if (message.group) {
+      if (!Array.isArray(envelopes) || envelopes.length < 2) {
+        return res.status(400).json({ success: false, error: 'Group edit requires envelopes for each member' });
+      }
+      message.envelopes = envelopes.map((item) => ({
+        user: item.user,
+        ...normalizeEnvelope(item),
+      }));
+      message.markModified('envelopes');
+    } else {
+      if (!validateEnvelope(forRecipient) || !validateEnvelope(forSender)) {
+        return res.status(400).json({
+          success: false,
+          error: 'forRecipient and forSender sealed-box envelopes are required',
+        });
+      }
+      message.forRecipient = normalizeEnvelope(forRecipient);
+      message.forSender = normalizeEnvelope(forSender);
+    }
+
+    message.editedAt = new Date();
+    await message.save();
+
+    const populated = await Message.findById(message._id)
+      .populate('attachment', ATTACHMENT_POPULATE)
+      .populate('replyTo', 'from forRecipient forSender envelopes group createdAt');
+    const payload = toClientMessage(populated);
+
+    const io = req.app.get('io');
+    if (message.group) {
+      const Group = (await import('../models/Group.js')).default;
+      const group = await Group.findById(message.group);
+      if (group && io) {
+        for (const memberId of group.members) {
+          io.to(memberId.toString()).emit('message:edited', payload);
+        }
+      }
+    } else {
+      emitToParticipants(io, message, 'message:edited', payload);
+    }
+
+    res.json({ success: true, data: payload });
+  } catch (err) {
+    res.status(500).json({ success: false, error: err.message });
+  }
 }
