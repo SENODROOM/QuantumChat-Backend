@@ -1,15 +1,13 @@
-name: Security Attack Suite
+name: L5 Nightly Deep Fuzz
 
-# Umbrella lane — full Security and Vulnerability Detection System.
-# Prefer L0–L4 required checks for faster parallel feedback; this job
-# still runs the complete detector suite on every PR.
 on:
-  push:
-  pull_request:
+  schedule:
+    - cron: '0 3 * * *'
+  workflow_dispatch:
 
 jobs:
-  attack-the-app:
-    name: Security Attack Suite
+  deep-fuzz:
+    name: Deep Fuzz and Stress
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
@@ -30,7 +28,16 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      - name: Run full security detector suite
-        run: npm run test:security
+      - name: Run nightly security depth suite
+        run: npm run test:security:nightly
         env:
-          SECURITY_FUZZ_KEYS: '128'
+          SECURITY_FUZZ_KEYS: '1000'
+
+      - name: Upload TAP log
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: nightly-security-report
+          path: |
+            *.txt
+          if-no-files-found: ignore

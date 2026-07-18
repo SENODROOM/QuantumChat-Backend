@@ -1,0 +1,31 @@
+name: Security Canary
+
+# Proves the vulnerability detector can fail (gate is armed).
+on:
+  push:
+  pull_request:
+
+jobs:
+  canary-armed:
+    name: Security Canary (must fail)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Expect canary failure
+        run: |
+          if npm run test:security:canary; then
+            echo "Canary unexpectedly passed — security gate appears disarmed"
+            exit 1
+          fi
+          echo "Canary failed as expected — security gate is armed"

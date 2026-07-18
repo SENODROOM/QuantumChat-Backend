@@ -5,14 +5,25 @@ on:
   pull_request:
 
 jobs:
-  crypto:
+  crypto-algorithms:
     name: Crypto Algorithms
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
         with:
           node-version: 22
           cache: npm
-      - run: npm ci
-      - run: node --test test/security/randomness-integrity.test.js test/security/crypto-algorithms.test.js test/security/input-hardening.test.js
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run offline crypto + randomness + input hardening
+        run: |
+          node --test --test-concurrency=1 \
+            test/security/randomness-integrity.test.js \
+            test/security/crypto-algorithms.test.js \
+            test/security/input-hardening.test.js

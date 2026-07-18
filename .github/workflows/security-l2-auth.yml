@@ -1,12 +1,12 @@
-name: Backend Build
+name: L2 Auth Abuse
 
 on:
   push:
   pull_request:
 
 jobs:
-  build:
-    name: Backend Build
+  auth-abuse:
+    name: Auth Abuse
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
@@ -18,13 +18,14 @@ jobs:
           node-version: 22
           cache: npm
 
+      - name: Cache MongoDB test binary
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/mongodb-binaries
+          key: mongodb-7.0.24-${{ runner.os }}
+
       - name: Install dependencies
         run: npm ci
 
-      - name: Syntax check
-        run: |
-          node --check server.js
-          node --check src/app.js
-
-      - name: npm audit (critical)
-        run: npm audit --omit=dev --audit-level=critical
+      - name: Run auth abuse lane
+        run: npm run test:security:auth

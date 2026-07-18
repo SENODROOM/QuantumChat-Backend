@@ -7,7 +7,16 @@
   "scripts": {
     "dev": "nodemon server.js",
     "start": "node server.js",
-    "test": "node --test --test-concurrency=1"
+    "test": "node --test --test-concurrency=1",
+    "test:e2e-crypto": "node --test --test-concurrency=1 test/security/e2e-ciphertext-confidentiality.test.js",
+    "test:security": "node --test --test-concurrency=1 test/security/",
+    "test:security:crypto": "node --test --test-concurrency=1 test/security/e2e-ciphertext-confidentiality.test.js test/security/e2e-group-ciphertext.test.js test/security/crypto-algorithms.test.js test/security/randomness-integrity.test.js test/security/crypto-fuzz.test.js",
+    "test:security:auth": "node --test --test-concurrency=1 test/security/auth-abuse.test.js test/security/auth-rate-limit.test.js",
+    "test:security:api": "node --test --test-concurrency=1 test/security/api-vuln-detection.test.js test/security/server-attack-surface.test.js test/security/input-hardening.test.js",
+    "test:security:abuse": "node --test --test-concurrency=1 test/security/transport-hardening.test.js",
+    "test:security:socket": "node --test --test-concurrency=1 test/security/socket-auth.test.js",
+    "test:security:canary": "node --test --test-concurrency=1 security-canary/canary-must-fail.test.js",
+    "test:security:nightly": "node --test --test-concurrency=1 test/security/crypto-fuzz.test.js test/security/socket-auth.test.js test/security/stories-invite.test.js"
   },
   "dependencies": {
     "bcryptjs": "^2.4.3",
@@ -23,6 +32,8 @@
     "tweetnacl": "^1.0.3"
   },
   "devDependencies": {
-    "nodemon": "^3.1.4"
+    "mongodb-memory-server": "^10.1.2",
+    "nodemon": "^3.1.4",
+    "socket.io-client": "^4.8.3"
   }
 }

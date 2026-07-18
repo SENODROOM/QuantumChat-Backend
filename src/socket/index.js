@@ -42,7 +42,7 @@ export function attachSocket(io) {
       const token = socket.handshake.auth?.token;
       if (!token) return next(new Error('Missing auth token'));
 
-      const payload = jwt.verify(token, process.env.JWT_SECRET);
+      const payload = jwt.verify(token, process.env.JWT_SECRET, { algorithms: ['HS256'] });
       const user = await User.findById(payload.id);
       if (!user) return next(new Error('User not found'));
 
