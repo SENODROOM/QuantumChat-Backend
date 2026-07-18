@@ -1,9 +1,6 @@
 import crypto from 'crypto';
 import User, { KEY_SET_SIZE } from '../models/User.js';
 
-// services/quantumAIResponder.js
-import Message from '../models/Message.js';
-
 export const QUANTUM_AI_USERNAME = 'QuantumAI';
 export const QUANTUM_AI_EMAIL = 'quantumai@system.quantumchat';
 
@@ -48,20 +45,4 @@ export async function ensureQuantumAIUser() {
     }
     throw error;
   }
-}
-
-
-
-export async function maybeRespondAsQuantumAI(io, { fromUserId, toUserId, plaintext }) {
-  const bot = await ensureQuantumAIUser();
-  if (String(toUserId) !== String(bot._id)) return; 
-
-  const reply = await generateAIReply(fromUserId, plaintext); 
-  const message = await Message.create({
-    from: bot._id,
-    to: fromUserId,
-    envelopes: [fromUserId],
-    isBotReply: true,
-  });
-  io.to(String(fromUserId)).emit('message:new', toClientMessage(message));
 }
